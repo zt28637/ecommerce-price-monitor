@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# IDE
+.idea/
+
+# 运行时数据：保留空目录（.gitkeep），内容一律不入库
+project/runtime/**
+!project/runtime/**/
+!project/runtime/**/.gitkeep
+
+# 影刀工作目录=仓库根，相对路径产生的运行数据（如 runtime/collect_state）
+/runtime/
+
+# 敏感：环境与凭证（含 token/webhook），永不入库
+project/config/collect_env.json
+.env
+.env.*
+
+# AI 工具本地配置（任意层级的点目录/文件），不入库
+.claude/
+.cursor/
+.vscode/
+.github/
+.mcp.json
+
+# docs 本地维护，不入库（面试向/部署向内容）
+project/docs/
+
+# OS / 临时
+Thumbs.db
+~$*
+

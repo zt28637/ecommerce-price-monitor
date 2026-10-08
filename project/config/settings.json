@@ -1,0 +1,59 @@
+{
+  "api": {
+    "base_url": "https://api.justoneapi.com",
+    "timeout_sec": 180,
+    "max_retries": 3,
+    "delay_between_products": [2, 5],
+    "versions": ["v9", "v5", "v4", "v1"]
+  },
+  "crawl": {
+    "delay_between_products": [2, 5],
+    "delay_between_pages": [5, 10],
+    "delay_fallback": [10, 20],
+    "price_range": [190, 2000],
+    "max_products": 50
+  },
+  "alert": {
+    "drop_pct_threshold": 5.0,
+    "new_lowest_enabled": true,
+    "promo_mode_enabled": true
+  },
+  "clean": {
+    "models": [
+      {"pattern": "(?i)Z6\\s*Pro", "standard": "Z6Pro"},
+      {"pattern": "(?i)Z5\\s*Pro", "standard": "Z5Pro"},
+      {"pattern": "(?i)Z10", "standard": "Z10"},
+      {"pattern": "(?i)Z9", "standard": "Z9"},
+      {"pattern": "(?i)Z8", "standard": "Z8"},
+      {"pattern": "(?i)Z7", "standard": "Z7"},
+      {"pattern": "(?i)Z6(?!\\s*Pro)", "standard": "Z6"},
+      {"pattern": "(?i)Z5(?!\\s*Pro)", "standard": "Z5"},
+      {"pattern": "(?i)D4", "standard": "D4"},
+      {"pattern": "(?i)D3", "standard": "D3"},
+      {"pattern": "(?i)D2", "standard": "D2"},
+      {"pattern": "(?i)Q7", "standard": "Q7"},
+      {"pattern": "(?i)Q5", "standard": "Q5"},
+      {"pattern": "(?i)Q2", "standard": "Q2"}
+    ],
+    "versions": {
+      "少年版": "少年版", "少年款": "少年版",
+      "旗舰版": "旗舰版", "旗舰款": "旗舰版",
+      "标准版": "标准版", "标准款": "标准版",
+      "青春版": "青春版", "儿童版": "儿童版"
+    },
+    "colors": {
+      "茶金白": "茶金白", "少年白": "茶金白",
+      "陨石灰": "陨石灰", "少年灰": "陨石灰",
+      "天境蓝": "天境蓝", "天镜蓝": "天境蓝",
+      "星云粉": "星云粉", "粉色": "星云粉",
+      "幻影黑": "幻影黑", "极光蓝": "极光蓝",
+      "蜜桃粉": "蜜桃粉", "薄荷绿": "薄荷绿",
+      "珊瑚红": "珊瑚红"
+    }
+  },
+  "report": {
+    "image_concurrent_workers": 5,
+    "image_max_width": 88,
+    "image_max_height": 76
+  }
+}
