@@ -152,6 +152,9 @@ MIN(price) OVER (
 | 改完视图字段不刷新 | 元数据缓存 | 「手动同步」 |
 | 跑 API 验证脚本，全 200 却判定为失败 | 本版 `/api/dataset` 同步结果返回 **HTTP 202** | 状态判断写 `in (200, 202)` |
 | BI 里只有 product_id 人看不懂 | 视图层没拼维度 | `v_price_daily` 建视图时顺手 JOIN 商品名/店铺名 |
+| 看板"当前价"里混着两个月前的旧商品 | `competitor_sku` 是 **upsert 累积表**，下架商品永不删（2026-10-25 实测 347 行里 228 行是旧批次） | 视图/告警一律按 `DATE(crawl_time)=最近采集日` 圈定，见 `v_sku_latest` 与 alert.py |
+| 钉钉预警出现"幽灵降价"，今日价其实是旧快照 | `sku_ingest._parse_datetime` 曾用 `now()` 兜底：重放旧数据表时旧价被盖上"今天"戳 | 2026-10-25 已改为诚实回退当日 0 点；历史脏行需清理（见 §6 待修项） |
+| `PUT /api/dashboard/:id` 报 500 `ClassCastException: String cannot be cast to Associative`（v0.64） | dashcards 条目字段不全（0.63 时代少字段还能过） | 每条必须给齐：`id`(负临时整数) `card_id` `col` `row` `size_x` `size_y` `series` `parameter_mappings` `visualization_settings` `dashboard_tab_id` |
 
 ### API 相关（只有打算脚本化建看板才需要）
 

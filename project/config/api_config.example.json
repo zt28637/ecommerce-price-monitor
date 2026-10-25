@@ -1,0 +1,17 @@
+{
+  "token": "<你的 JustOneAPI token>",
+  "base_url": "https://api.justoneapi.com",
+  "timeout_sec": 180,
+  "max_retries": 3,
+  "detail_version": "v9",
+  "detail_versions": ["v9", "v5", "v4", "v1"],
+  "llm": {
+    "provider": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-your-api-key-here",
+    "model": "gpt-4o-mini",
+    "temperature": 0.3,
+    "max_tokens": 2000,
+    "timeout_sec": 60
+  }
+}

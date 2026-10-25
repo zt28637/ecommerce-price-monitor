@@ -23,13 +23,15 @@ L3 本项目    AGENTS.md + project/
 ├── .claude/  .cursor/  .github/  .vscode/  # 工具配置
 ├── .mcp.json  .gitignore
 └── project/
-    ├── config/                          # 配置（数据库/预警/策略）
-    ├── modules/                         # ①商品采集 ②SKU采集 ③清洗 汇总 ⑤告警
-    │   ├── 1.竞品商品数据采集/           # 影刀流程 + product_collect.py
+    ├── config/                          # 配置（数据库/预警/策略/BI 视图 DDL）
+    ├── modules/                         # ⓪登录 ①商品采集 ②SKU采集 ③清洗 ④汇总 ⑤告警 ⑥看板
+    │   ├── 0.淘宝自动化登录/             # 0-0/0-1/0-2 三画布（凭据本地文件，不入库）
+    │   ├── 1.竞品商品数据采集/           # 影刀流程 + product_collect(_py).py
     │   ├── 2.竞品SKU数据采集/            # B-SKU + B1 + B2 子流程 + api/api_to_datatable/sku_write
-    │   ├── 3.竞品信息数据清洗/           # 子流程C + product_clean.py
+    │   ├── 3.竞品数据清洗/               # product_clean.py
     │   ├── 4.竞品数据汇总/              # product_ingest / sku_ingest / report
-    │   └── 5.竞品价格告警/              # alert.py
+    │   ├── 5.竞品价格告警/              # alert.py（两段式预警 + 钉钉加签）
+    │   └── 6.竞品数据看板/              # Metabase SOP/运维/原理与踩坑（无画布）
     ├── docs/                            # 作品规格 · Agent 索引
     └── runtime/                         # 运行时数据
         ├── product_raw/                 # 商品原始 Excel（影刀采集输出）
@@ -82,6 +84,7 @@ L5 输出   日报│预警│看板    → 一律读视图，并行只读
 
 - **L3 校验必须在 L4 入库之前** —— `competitor_sku` 是 upsert 快照、`price_history` 是 append，脏数据落库后洗不掉
 - **L5 三个消费者一律读 `v_*` 视图，不许裸查基表** —— `price_history` 同一 key 实测最多 32 条，裸查重复计数，会出现"日报 899 / 钉钉 909"
+  - ⚠️ **现状例外（2026-10-25）**：`alert.py` 仍直查基表，但已内置与 `v_price_change` 完全相同的口径（`ROW_NUMBER` 去重 + "上一快照" + `DATE(crawl_time)=今日` 圈定），并做过逐行交叉验证；后续可平滑切换到视图查询
 - **报表页头摘要与 `run_stats` 必须同源** —— 两处数字不同源就是自己跟自己打架
 - **（2026-10-05 修正，取代原"两版不共享代码、独立 schema"约束）** Python 版 = L1 采集（DrissionPage 重写）+ L2–L5 复用 `project/modules/` 既有模块，共写 `price_monitor`、共用 `project/runtime/`；**"不共享"只保留一条：浏览器 profile 与调试端口绝不与影刀共用**（锁冲突+登录态互踩）
 - **⚠️ `runtime/` 目录名以实测为准，不要信文档**：实际是 `product_allraw/`（装 SKU raw）+ `product_clean/` + `report/`；文档写的 `sku_raw/` **根本不存在**
@@ -120,7 +123,7 @@ DDL：[project/config/init_database_v0.sql](project/config/init_database_v0.sql)
 | **Python 版采集层（纯网页 DrissionPage）** | **[project/modules/1.竞品商品数据采集/product_collect_py.py](project/modules/1.竞品商品数据采集/product_collect_py.py)**（文件头=定位/用法/契约）+ 本文件 §架构"混合架构"条目；列契约见 §硬性约束 |
 | **输出契约（列名/格式）** | 上述两份设计的 **§9**（两处一致）。⚠️ 系统架构 §2 已降级为历史存档，别照它写 |
 | 了解业务全貌 | [project/docs/portfolio/作品1-淘宝竞品价格监控.md](project/docs/portfolio/作品1-淘宝竞品价格监控.md) |
-| 影刀 + Python 模块 | [project/modules/](project/modules/) ①商品采集 ②SKU采集 ③清洗 汇总 ⑤告警 |
+| 影刀 + Python 模块 | [project/modules/](project/modules/) ⓪登录 ①商品采集 ②SKU采集 ③清洗 ④汇总 ⑤告警 ⑥看板 |
 | 数据库 | [project/config/init_database_v0.sql](project/config/init_database_v0.sql) |
 | 配置/策略 | [project/config/](project/config/) |
 | Agent 文档索引 | [project/docs/agent/INDEX.md](project/docs/agent/INDEX.md) |

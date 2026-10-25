@@ -1,84 +1,122 @@
-# 淘宝竞品价格监控自动化（V0）
+# 淘宝竞品价格监控自动化
 
-电商竞品价格监控系统 — 自动登录、搜索采集、SKU 深采、清洗入库、日报、钉钉预警、BI 看板。**全程无需人工改价**。
+电商竞品价格监控系统 — 自动登录、关键词采集、SKU 深采、清洗入库、日报、钉钉降价预警、BI 看板。
+**影刀 RPA 负责拿数据，Python 负责算数据，MySQL/Metabase 负责存与看。**
 
-**一句话链路**：关键词搜索 → 按销量排序 → 筛出 50 个合格竞品 → 深采 SKU 价格 → 自动清洗入库 → 日报 + 降价预警 → 看板趋势分析。
+```
+关键词搜索 → 销量排序 → 采集竞品列表 → SKU 级深采(API 优先/网页兜底)
+          → 清洗入库(3 表) → 日报 Excel + 降价钉钉预警 → Metabase 趋势看板
+```
+
+| 指标 | 实测值（2026-10-25 真实运行） |
+|------|------|
+| 监控商品 / SKU | 20 商品/轮，单商品最多 21 个 SKU |
+| 数据库 | `price_history` 累计 1000+ 行、4 个采集日；`competitor_sku` 单日 119 组合 |
+| 自动化链路 | 影刀画布 110 步主流程 + 6 个 Python 模块，一次跑通零人工 |
+| 看板 | 4 张视图 → 10 张图 → 1 个看板，全 SQL 可追溯 |
+
+## 架构
+
+```
+                  ┌───────────────────────────── 影刀 RPA（画布） ─────────────────────────────┐
+ 淘宝(Edge) ──登录──▶ ①商品列表采集 ──▶ ②SKU采集 ──┬─ JustOneAPI（v9→v5→v4→v1 版本轮转）
+                  │                                 └─ 网页兜底（B1 一维 / B2 二维 SKU 结构）
+                  └────────────────────────── 自定义数据账本（Excel） ──────────────────────┘
+                                                  │
+                     ┌──────────────── Python（全自动，被画布调用）────────────────┐
+                     │ ③ product_clean 清洗（价格区间/掩码价过滤） → 13 列标准表      │
+                     │ ④ product_ingest / sku_ingest 入库 → 3 张表                  │
+                     │ ⑤ report 日报 Excel ＋ alert 降价/新低预警 → 钉钉             │
+                     └────────────────────────────┬───────────────────────────────┘
+                                                  ▼
+                              MySQL `price_monitor`（3 基表 + 4 视图）
+                                                  │ 只读
+                                                  ▼
+                                     Metabase 看板（10 张图，原生 SQL）
+```
 
 ## 技术栈
 
-| 层 | 技术 |
-|----|------|
-| 登录 + 列表/SKU 采集 | 影刀 RPA（画布）+ Edge |
-| SKU 详情数据 | JustOneAPI 优先 → 影刀网页兜底 |
-| 清洗/入库/日报/告警 | Python 3（openpyxl / pymysql / requests） |
-| 数据库 | MySQL 8（3 张基表 + 4 张 BI 视图） |
-| 通知 | 钉钉 Webhook（降价 ≥5% / 新最低价触发） |
-| 看板 | Metabase（单 jar，只读 `v_*` 视图） |
+| 层 | 技术 | 说明 |
+|----|------|------|
+| 采集 | 影刀 RPA 画布 + Edge | 拟人滚动、滑块/锁页/登录失效三类风控分支 |
+| 数据接口 | JustOneAPI（HTTP JSON） | 四版本自动轮转 + 网络重试 + 随机节奏 |
+| 处理 | Python 3：openpyxl / pymysql / requests | 无框架依赖，模块化、可单测、可独立运行 |
+| 存储 | MySQL 8（窗口函数） | append-only 历史 + upsert 快照，视图层去重 |
+| 通知 | 钉钉自定义机器人（加签） | 两段式预警：历史新低（紧急）/ 降价超阈值（警告） |
+| 看板 | Metabase 单 jar（无 Docker） | 只查 `v_*` 视图；口径与告警同源 |
 
-## 数据流（与影刀画布 main 一致，27 步）
+## 三个工程难点（面试重点）
 
-```
-⓪ 自动化登录        影刀画布：凭据设置 → 模拟登录
-① 竞品商品数据采集   影刀画布 → 自定义数据账本导出原始 Excel
-② 竞品SKU数据采集    JustOneAPI 优先 → 网页兜底（B1 一维 / B2 二维两种 SKU 结构）
-③ 数据清洗          product_clean.py：价格区间过滤、掩码价丢弃 → 13 列清洗表
-④ 数据汇总          product_ingest.py / sku_ingest.py 入库三表；report.py 出日报 Excel
-⑤ 价格告警          alert.py → 钉钉
-⑥ BI 看板           Metabase 读 v_* 视图（均价/最低价/趋势）
-```
+### 1. 接口"假下架"与多版本容错
 
-凭据与配置分三处存放：淘宝**账号/密码**（机密）由影刀弹窗写入电脑固定位置的文件（0-1 流程），不进本仓库；**搜索词单**唯一正本 [project/config/keywords.json](project/config/keywords.json)，影刀画布经 `config_loader` 模块直读（不再维护资源文件副本，蓝本见 [1-4词单config_loader改造蓝本](project/modules/1.竞品商品数据采集/1-4词单config_loader改造蓝本.md)）；**钉钉 webhook/加签**走影刀全局变量 `glv['dingtalk_webhook'] / ['dingtalk_secret']`，不在 keywords.json 里。
+JustOneAPI 的 v9 对**在售商品**也会返回 `data: "商品已经下架"`（字符串而非对象）。旧代码 `if result.get("data"):` 会让假话短路版本轮转，直接把在售商品当死链。
+修复：成功闸门必须是"非空 dict" + 业务失败继续轮转下一版本（[api.py](project/modules/2.竞品SKU数据采集/api.py)），下架数据进入类型守卫后判空跳过，**流程不中断但绝不写脏数据**。
+
+### 2. 采集链路的"外部快照过期"型数据一致性
+
+线上实测抓出三类静默错数（不报错、但数字是假的）：
+
+| 症状 | 根因 | 修复 |
+|------|------|------|
+| 预警出现"两个月前的降价" | `competitor_sku` 是 upsert 累积表，下架商品永不删（347 行里 228 行是旧批次） | 告警/视图一律按 `DATE(crawl_time)=最近采集日` 圈定今日宇宙 |
+| 旧数据被盖上"今天"的时间戳 | 采集时间只有日期时 `now()` 兜底，重放历史表即污染 | 改为诚实回退"当日 0 点"，与日期字段同源自洽 |
+| 同批插入时间戳相同 → 预警重复×2 | `MAX(crawl_time)` 自连接翻倍 | 视图与告警统一 `ROW_NUMBER() OVER (PARTITION BY … ORDER BY crawl_time DESC, id DESC)` 取 Top1 |
+
+配套修掉的还有**预警口径漂移**：原来比"日历昨天"，断跑一天就全哑（当日 0 条预警）；改为比"**上一次快照**"后，同一次数据从 26 条（含幽灵）收敛到 4 条真实新低，且与 BI 看板逐行对齐。
+
+### 3. 影刀画布的可审计化
+
+RPA 流程本体加密存在客户端里，不可 diff、不可 review。本项目用官方 studio-mcp 逐行转录画布为 Markdown（行号=画布块序号，密钥自动脱敏），仓库里可以直接 grep 每个判断分支，交叉审核发现并修复了多处真实缺陷（参数传错、退出循环导致整批腰斩等）。
+**约定：画布即真源，改流程先改画布再重新转录。**
 
 ## 目录结构
 
 ```
 project/
-├── config/
-│   ├── database.json · api_config.json · settings.json · promo_dates.json
-│   ├── collect_shadowbot.json     # 影刀版采集调参（目标数/间隔/止损，入 git）
-│   ├── init_database_v0.sql       # 三表 DDL
-│   └── init_bi_views.sql          # 看板四视图 DDL（幂等，可重跑）
+├── config/            # 配置与 DDL（database.json / api_config.json / init_*.sql）
 ├── modules/
-│   ├── 主流程_main.md · 索引.md    # 影刀画布逐行转录（附交叉审核疑点）
-│   ├── 0.淘宝自动化登录/           # 0-0 / 0-1 / 0-2 三画布
-│   ├── 1.竞品商品数据采集/         # 1-1 采集（125 步）/ 1-2 翻页
-│   ├── 2.竞品SKU数据采集/          # B + B1 + B2 画布；api / api_to_datatable / sku_write
-│   ├── 3.竞品数据清洗/             # product_clean.py
-│   ├── 4.竞品数据汇总/             # product_ingest / sku_ingest / report
-│   ├── 5.竞品价格告警/             # alert.py
-│   └── 6.竞品数据看板/             # Metabase 搭建 SOP + 运维文档（无代码）
-├── tools/                          # studio-mcp 画布转录脚本
-└── runtime/                        # 运行时 Excel/日志（不入 git）
+│   ├── 0.淘宝自动化登录/          # 登录画布（凭据外置，不进仓库）
+│   ├── 1.竞品商品数据采集/        # 列表采集 + 翻页（画布转录）
+│   ├── 2.竞品SKU数据采集/         # 画布 + api / api_to_datatable / sku_write
+│   ├── 3.竞品数据清洗/            # product_clean.py
+│   ├── 4.竞品数据汇总/            # product_ingest / sku_ingest / report
+│   ├── 5.竞品价格告警/            # alert.py（两段式预警 + 钉钉加签发送）
+│   └── 6.竞品数据看板/            # Metabase 搭建 SOP + 运维 + 原理与踩坑
+├── docs/              # 设计文档、Agent 索引、STAR 陈述稿
+├── tools/             # studio-mcp 画布转录脚本
+└── runtime/           # 运行时 Excel / 日志（不入 git）
 ```
-
-## 画布即真源
-
-影刀流程本体在编辑器里；仓库内每个 `.md` 是由官方 studio-mcp 接口逐行转录（`python project/tools/transcribe_flows.py`），行号=画布块序号，可 diff、可 grep、密钥自动脱敏。转录覆盖与审核记录见 [project/modules/索引.md](project/modules/索引.md)。**改流程先改画布、再重新转录，不要手改 .md。**
 
 ## 快速开始
 
 ```bash
 pip install -r requirements.txt
 
-# 初始化数据库（三表）
-mysql -u root -p < project/config/init_database_v0.sql
+mysql -u root -p < project/config/init_database_v0.sql   # 三表
+mysql -u root -p < project/config/init_bi_views.sql      # 看板四视图（幂等）
 
-# 看板视图（用⑥才需要；CREATE OR REPLACE 幂等）
-mysql -u root -p < project/config/init_bi_views.sql
-
-# 填配置
-#   project/config/database.json    MySQL 连接
-#   project/config/api_config.json  JustOneAPI base_url / token
-
-# 影刀打开应用「淘宝竞品价格监控自动化」→ 跑 0-1登录凭据设置 → 运行 main
+# 配置：project/config/database.json、api_config.json（凭据不进仓库）
+# 影刀打开应用 → 跑登录凭据设置 → 运行 main
 ```
 
-看板搭建 SOP：[project/modules/6.竞品数据看板/6-0看板搭建.md](project/modules/6.竞品数据看板/6-0看板搭建.md)
+看板搭建：[6-0 看板搭建 SOP](project/modules/6.竞品数据看板/6-0看板搭建.md) ·
+日常运维：[6-1 日常运维](project/modules/6.竞品数据看板/6-1日常运维.md)
 
-## 版本
+## 设计取舍（也可当面试题目）
 
-当前 **V0.3**（完整定义：[VERSION.md](VERSION.md)）。2026-09 下旬增量已落仓、未定档：⓪ 登录画布实装、⑥ Metabase 看板、影刀画布转录与交叉审核。
+- **下架商品静默跳过**：只保证流程不中断，不写标记行——审计需求出现前不引入复杂度。
+- **API 优先、网页兜底**：接口稳定时省 90% 的浏览器时间；被限流/下架误报时网页兜底不让数据断顿。
+- **掩码价直接丢弃**：平台隐藏价格（`?`）没有分析价值，入库即污染均值。
+- **BI 只读侧挂**：Metabase 不参与写入，删了看板业务数据一根毛不动，回滚零风险。
+
+## 验证与边界（诚实说明）
+
+- ✅ 全链路真实跑通：采集 → 入库 → 日报 → 钉钉预警（真实群收达）→ 看板 10 图全部返回数据
+- ✅ 预警与看板口径交叉验证一致（同一批 4 条新低）
+- ⚠️ 只针对淘宝 PC 端详情页一套 DOM；平台改版需要更新元素库
+- ⚠️ 采集频率未做分布式调度；长期多账号需要引入代理与队列
 
 ---
 
-**作者**：周涛 · **用途**：RPA 开发者作品
+**作者**：周涛 · **用途**：RPA / 自动化开发作品集

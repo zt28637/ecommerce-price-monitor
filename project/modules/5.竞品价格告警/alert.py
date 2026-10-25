@@ -8,13 +8,15 @@
   ① 历史新低 — 今日实际售价 < 历史最低价（排除今日自身）
      级别：紧急  |  互斥：命中后不再触发②
 
-  ② 昨日降价 — 今日实际售价 < 昨日实际售价，且降幅 > 阈值
+  ② 降价预警 — 今日实际售价 < 上一次快照价（该 SKU 今天之前最近一次采集，
+     不是"日历昨天"——断跑几天也对齐最近一次），且降幅 > 阈值
      级别：警告  |  默认阈值 5%
 
 数据库查询：
-  competitor_sku（今日快照）
+  competitor_sku（今日快照 = WHERE DATE(crawl_time)=今日；该表本身是
+    upsert 累积表，含历史下架商品的陈旧行，不过滤会把旧价当今日价误报）
     JOIN competitor_product（取商品名）
-    LEFT JOIN price_history（昨日最新价 + 历史最低价）
+    LEFT JOIN price_history（上次快照价 + 历史最低价，均排除今日）
 
 调用方式：
   影刀：alert.main(config_path, webhook_url, keyword, drop_pct)
@@ -22,12 +24,22 @@
 ============================================================
 """
 
+import base64
+import hashlib
+import hmac
 import json
 import os
-from datetime import date, datetime, timedelta
+import time
+import urllib.parse
+from datetime import date
 
 import pymysql
 import requests
+
+try:
+    from xbot import print  # 影刀运行时：print 转进运行日志面板；本地调试回退内置 print
+except ImportError:
+    pass
 
 
 # ============================================================
@@ -84,11 +96,12 @@ def fetch_alert_data(config_path):
       product_name    — 商品名称
       sku_name        — SKU名称
       today_price     — 今日实际售价（来自 competitor_sku.sku_price）
-      yesterday_price — 昨日最新价（来自 price_history，当天最后一次采集）
+      last_price      — 上一次快照价（price_history 中该 SKU 今天之前最近一次采集；
+                        断跑多日也对齐"上一快照"，不是"日历昨天"）
+      last_date       — 上一快照所在采集日期（消息里标注，避免隔多日误读）
       history_lowest  — 历史最低价（来自 price_history，排除今日）
     """
     today = date.today()
-    yesterday = today - timedelta(days=1)
 
     conn = _connect(config_path)
     try:
@@ -99,7 +112,8 @@ def fetch_alert_data(config_path):
                     p.product_name,
                     s.sku_name,
                     s.sku_price   AS today_price,
-                    y.price       AS yesterday_price,
+                    y.price       AS last_price,
+                    y.crawl_date  AS last_date,
                     (
                         SELECT MIN(h.price)
                         FROM price_history h
@@ -112,26 +126,32 @@ def fetch_alert_data(config_path):
                 JOIN competitor_product p
                     ON s.product_id = p.product_id
                 LEFT JOIN (
-                    -- 子查询：取昨日每个 SKU 的最新价格
-                    SELECT h1.product_id, h1.sku_name, h1.price
-                    FROM price_history h1
-                    INNER JOIN (
-                        SELECT product_id, sku_name,
-                               MAX(crawl_time) AS max_time
-                        FROM price_history
-                        WHERE crawl_date = %s
-                        GROUP BY product_id, sku_name
-                    ) h2 ON h1.product_id = h2.product_id
-                        AND h1.sku_name   = h2.sku_name
-                        AND h1.crawl_time = h2.max_time
-                    WHERE h1.crawl_date = %s
+                    -- 子查询：取每个 SKU "今天之前最近一次"采集的价格（上一快照）
+                    -- 用 < today 而非 = 昨天：断跑 N 天仍对齐真实上一次，预警不漏
+                    -- ROW_NUMBER 去重：同批插入的多行 crawl_time 完全相同，
+                    -- MAX(crawl_time) 自连接会翻倍出重复预警（2026-10-25 实测 119→128）
+                    SELECT product_id, sku_name, price, crawl_date
+                    FROM (
+                        SELECT h1.product_id, h1.sku_name, h1.price, h1.crawl_date,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY h1.product_id, h1.sku_name
+                                   ORDER BY h1.crawl_time DESC, h1.id DESC
+                               ) AS rn
+                        FROM price_history h1
+                        WHERE h1.crawl_date < %s
+                    ) x
+                    WHERE rn = 1
                 ) y ON s.product_id = y.product_id
                     AND s.sku_name   = y.sku_name
+                -- competitor_sku 是 upsert 累积表（下架商品永不删除），
+                -- 必须按 crawl_time 圈定"今日真实采集"，否则拿两个月前的
+                -- 陈旧快照当今日价，幽灵降价全涌进预警（2026-10-25 实测）
+                WHERE DATE(s.crawl_time) = %s
                 ORDER BY p.product_id, s.sku_name
             """
-            # 三个 %s 依次对应：历史最低的日期过滤、昨日最大时间的日期、
-            #                   昨日价格的日期（与上面同一个 yesterday）
-            cur.execute(sql, (today, yesterday, yesterday))
+            # 三个 %s 都绑 today（按 SQL 文本中出现顺序）：
+            #   ①历史最低排今日 ②上次快照=今日前最近一条 ③圈定今日采集
+            cur.execute(sql, (today, today, today))
             return cur.fetchall()
     finally:
         conn.close()
@@ -153,8 +173,8 @@ def check_alerts(rows, drop_pct=5.0):
         {
           "type": "new_lowest" | "price_drop",
           "level": "紧急" | "警告",
-          "product": "商品名", "sku": "SKU名",
-          "today_price": 69.9, "yesterday_price": 79.9,
+          "product": "商品名", "product_id": "商品ID", "sku": "SKU名",
+          "today_price": 69.9, "last_price": 79.9, "last_date": date | None,
           "history_lowest": 79.9, "percent": 12.5
         }
     """
@@ -164,7 +184,7 @@ def check_alerts(rows, drop_pct=5.0):
         product = row.get("product_name") or row.get("product_id") or ""
         sku = row.get("sku_name") or ""
         today = _to_float(row.get("today_price"))
-        yesterday = _to_float(row.get("yesterday_price"))
+        last = _to_float(row.get("last_price"))
         hist_low = _to_float(row.get("history_lowest"))
 
         # 今日无价格 → 跳过
@@ -179,28 +199,32 @@ def check_alerts(rows, drop_pct=5.0):
                 "type": "new_lowest",
                 "level": "紧急",
                 "product": product,
+                "product_id": row.get("product_id") or "",
                 "sku": sku,
+                "last_date": row.get("last_date"),
                 "today_price": today,
-                "yesterday_price": yesterday,
+                "last_price": last,
                 "history_lowest": hist_low,
                 "percent": pct,
             })
-            # 历史新低本身已是降价，不再重复触发"昨日降价"
+            # 历史新低本身已是降价，不再重复触发"降价预警"
             continue
 
-        # ---- 预警②：昨日降价 ----
-        # 条件：有昨日价格 且 昨日价 > 0 且 降幅 > 阈值
-        if yesterday is not None and yesterday > 0:
-            drop_rate = (yesterday - today) / yesterday
+        # ---- 预警②：降价预警（vs 上一次快照） ----
+        # 条件：有上次快照价 且 > 0 且 降幅 > 阈值
+        if last is not None and last > 0:
+            drop_rate = (last - today) / last
             if drop_rate * 100 > drop_pct:
                 pct = round(drop_rate * 100, 1)
                 alerts.append({
                     "type": "price_drop",
                     "level": "警告",
                     "product": product,
+                    "product_id": row.get("product_id") or "",
                     "sku": sku,
+                    "last_date": row.get("last_date"),
                     "today_price": today,
-                    "yesterday_price": yesterday,
+                    "last_price": last,
                     "history_lowest": hist_low,
                     "percent": pct,
                 })
@@ -227,10 +251,16 @@ def _build_markdown(alerts, keyword=""):
     lines = [f"## {title}", ""]
 
     for i, alert in enumerate(alerts, 1):
+        # "上次"标注日期：断跑多日后避免被误读成"昨天刚降"
+        pid_line = f"> 商品ID：{alert.get('product_id', '')}\n\n" if alert.get("product_id") else ""
+        last_date = alert.get("last_date")
+        date_tag = f"（{last_date}）" if last_date else ""
+
         if alert["type"] == "new_lowest":
             lines.append(
                 f"**{i}. 历史新低**\n\n"
                 f"> 商品：{alert['product']}\n\n"
+                f"{pid_line}"
                 f"> SKU：{alert['sku']}\n\n"
                 f"> 历史最低：{alert['history_lowest']} → "
                 f"今日：**{alert['today_price']}**\n\n"
@@ -240,8 +270,9 @@ def _build_markdown(alerts, keyword=""):
             lines.append(
                 f"**{i}. 价格下降 {alert['percent']}%**\n\n"
                 f"> 商品：{alert['product']}\n\n"
+                f"{pid_line}"
                 f"> SKU：{alert['sku']}\n\n"
-                f"> 昨日：{alert['yesterday']} → "
+                f"> 上次{date_tag}：{alert['last_price']} → "
                 f"今日：**{alert['today_price']}**\n"
             )
 
@@ -252,14 +283,35 @@ def _build_markdown(alerts, keyword=""):
 # 钉钉发送
 # ============================================================
 
-def send_dingtalk(alerts, webhook_url, keyword=""):
+def _signed_url(webhook_url, secret=""):
+    """钉钉「加签」安全模式：URL 追加 timestamp+sign（官方 HMAC-SHA256 算法）。
+
+    不传 secret 则原样返回 —— 对应「自定义关键词」模式的机器人
+    （该模式下 keyword 须命中机器人所设关键词，否则被钉钉拒收 errcode 310000）。
+
+    影刀全局变量常见脏值：粘贴时连引号一起带入（'"https://…"'）→ 先剥掉。
+    """
+    webhook_url = str(webhook_url).strip().strip("\"'")
+    secret = str(secret).strip().strip("\"'")
+    if not secret:
+        return webhook_url
+    ts = str(round(time.time() * 1000))
+    digest = hmac.new(secret.encode("utf-8"),
+                      f"{ts}\n{secret}".encode("utf-8"),
+                      hashlib.sha256).digest()
+    sign = urllib.parse.quote_plus(base64.b64encode(digest))
+    return f"{webhook_url}&timestamp={ts}&sign={sign}"
+
+
+def send_dingtalk(alerts, webhook_url, keyword="", secret=""):
     """
     通过钉钉机器人 Webhook 发送预警消息
 
     参数:
         alerts      : check_alerts() 返回的预警列表
         webhook_url : 钉钉机器人 Webhook URL
-        keyword     : 搜索关键词（拼到标题）
+        keyword     : 搜索关键词（拼到标题；「关键词模式」还须命中）
+        secret      : 机器人「加签」密钥（SEC… 开头）；关键词模式留空
 
     返回:
         {"ok": True, "sent": N}  或  {"ok": False, "error": "..."}
@@ -271,7 +323,7 @@ def send_dingtalk(alerts, webhook_url, keyword=""):
 
     try:
         resp = requests.post(
-            webhook_url,
+            _signed_url(webhook_url, secret),
             json={
                 "msgtype": "markdown",
                 "markdown": {"title": title, "text": text},
@@ -295,7 +347,7 @@ def send_dingtalk(alerts, webhook_url, keyword=""):
 # 主入口
 # ============================================================
 
-def run(config_path, webhook_url, keyword="", drop_pct=5.0):
+def run(config_path, webhook_url, keyword="", secret="", drop_pct=5.0):
     """
     完整执行：查库 → 预警判断 → 发钉钉
 
@@ -303,17 +355,26 @@ def run(config_path, webhook_url, keyword="", drop_pct=5.0):
     """
     # 1. 查库
     rows = fetch_alert_data(config_path)
+    print(f"[alert] 查库完成：今日 SKU 快照 {len(rows)} 行")
 
     # 2. 预警判断
     alerts = check_alerts(rows, drop_pct=drop_pct)
+    n_low = sum(1 for a in alerts if a["type"] == "new_lowest")
+    n_drop = sum(1 for a in alerts if a["type"] == "price_drop")
+    print(f"[alert] 预警判断：共 {len(alerts)} 条（历史新低 {n_low} / 降价 {n_drop}）")
 
     # 3. 无预警直接返回
     if not alerts:
+        print("[alert] 无预警，不发送")
         return {"ok": True, "alert_count": 0, "sent": 0, "message": "无预警"}
 
-    # 4. 发钉钉
-    result = send_dingtalk(alerts, webhook_url, keyword=keyword)
+    # 4. 发钉钉（只记成功与否，不记消息内容与 webhook）
+    result = send_dingtalk(alerts, webhook_url, keyword=keyword, secret=secret)
     result["alert_count"] = len(alerts)
+    if result.get("ok"):
+        print(f"[alert] 钉钉发送成功：{result.get('sent', 0)} 条")
+    else:
+        print(f"[alert] 钉钉发送失败：{result.get('error', '')}")
     return result
 
 
@@ -331,14 +392,15 @@ def _safe_path(p):
     return s
 
 
-def main(config_path, webhook_url, keyword="", drop_pct=5.0):
+def main(config_path, webhook_url, keyword="", secret="", drop_pct=5.0):
     """
     影刀入口函数
 
     参数:
         config_path : database.json 绝对路径
-        webhook_url : 钉钉机器人 Webhook URL（必传）
-        keyword     : 搜索关键词（可选，拼标题）
+        webhook_url : 钉钉机器人 Webhook URL（必传，glv['dingtalk_webhook']）
+        keyword     : 搜索关键词（拼标题；关键词模式下须命中机器人关键词）
+        secret      : 钉钉机器人「加签」密钥（glv['dingtalk_secret']）；关键词模式留空
         drop_pct    : 降价阈值 %（默认 5，即降幅超过 5% 触发）
 
     返回:
@@ -349,6 +411,7 @@ def main(config_path, webhook_url, keyword="", drop_pct=5.0):
         config_path,
         webhook_url=webhook_url,
         keyword=keyword,
+        secret=secret,
         drop_pct=float(drop_pct) if drop_pct else 5.0,
     )
 
@@ -362,7 +425,27 @@ if __name__ == "__main__":
     PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(MODULE_DIR)))
 
     CONFIG = os.path.join(PROJECT_DIR, "project", "config", "database.json")
-    WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=你的token"
+    # 本地调试用：export ALERT_WEBHOOK=... ALERT_SECRET=...
+    # 真值永不写进代码/文档（同一组值在影刀全局变量 glv['dingtalk_webhook'/'dingtalk_secret']）
+    WEBHOOK = os.environ.get("ALERT_WEBHOOK", "")
+    SECRET = os.environ.get("ALERT_SECRET", "")
 
-    result = run(CONFIG, WEBHOOK, keyword="小天才Z6pro", drop_pct=5.0)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if not WEBHOOK:
+        # 防呆：没配环境变量就直说，别让 requests 报 "No connection adapters"
+        raise SystemExit("缺少环境变量 ALERT_WEBHOOK / ALERT_SECRET："
+                         "export ALERT_WEBHOOK='https://oapi.dingtalk.com/...' ALERT_SECRET='SEC...'")
+
+    if os.environ.get("ALERT_SMOKE") == "1":
+        # 接口冒烟：不查库，用伪造预警直发一条（专测 webhook/加签/关键词三关）
+        fake = [{"type": "new_lowest", "level": "紧急",
+                 "product": "[测试] 小天才Z6Pro", "product_id": "826399795851",
+                 "last_date": None, "sku": "Z6Pro_星云粉",
+                 "today_price": 899.0, "last_price": 999.0,
+                 "history_lowest": 999.0, "percent": 10.0}]
+        print(json.dumps(send_dingtalk(fake, WEBHOOK, keyword="小天才Z6pro",
+                                       secret=SECRET), ensure_ascii=False))
+    else:
+        # 完整链路：查库→判断→发送（库里当天无降价时 sent=0 属正常，不代表接口坏）
+        result = run(CONFIG, WEBHOOK, keyword="小天才Z6pro", secret=SECRET,
+                     drop_pct=5.0)
+        print(json.dumps(result, ensure_ascii=False, indent=2))

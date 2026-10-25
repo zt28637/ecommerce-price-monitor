@@ -1,68 +1,45 @@
 # VERSION.md — 项目版本定义
 
-## 当前版本：V0.3
+## 当前版本：V0.4
 
-**定义日期**：2026-09-13
+**定义日期**：2026-10-25
 
-### V0.3 定位
+### V0.4 定位
 
-> 五层架构对齐实际文件树。商品采集 → SKU采集 → 清洗 → 汇总 → 告警，全链路可运行。
+> 全链路闭环：登录 → 采集 → SKU 深采 → 清洗 → 入库 → 日报 → 钉钉预警 → BI 看板，
+> 七个环节全部真实跑通；并完成一轮基于线上数据的一致性缺陷修复。
 
-### V0.3 快照
+### V0.4 快照
 
 | 维度 | 状态 |
 |------|------|
-| **Python 模块** | 8 个（product_clean/product_ingest/sku_ingest/report/alert + api/api_to_datatable/sku_write） |
-| **影刀流程** | 6 个（商品数据采集/下一页按钮翻页/B-SKU 数据采集/B1-SKU 一维/B2-SKU 二维/子流程 C：数据清洗） |
-| **数据库** | MySQL 三表（competitor_product / competitor_sku / price_history） |
-| **配置** | database.json / api_config.json / init_database_v0.sql |
-| **文档** | 作品规格 + 总体设计 + 反爬方案 + Agent 索引 + STAR 陈述稿 |
+| **影刀流程** | 10 个画布（登录 3 / 商品采集 2 / SKU 采集 3 / 工具箱 1 / main 1），全部转录可审计 |
+| **Python 模块** | 10 个（业务：product_clean / product_ingest / sku_ingest / report / alert / api / api_to_datatable / sku_write；工具箱：config_loader / random_sleep） |
+| **数据库** | `price_monitor`：3 张基表 + 4 张 BI 视图（幂等 DDL） |
+| **告警** | 钉钉自定义机器人：历史新低（紧急）/ 较上次快照降价超 5%（警告），加签发送 |
+| **看板** | Metabase v0.64.1 单 jar：10 张原生 SQL 图 + 1 个看板，只读 `v_*` 视图 |
+| **一致性** | 告警与看板同口径（"上一快照"），交叉验证逐行一致；幽灵数据源已修复 |
+| **文档** | 原理与踩坑 / 搭建 SOP / 运维 / 画布转录索引 / STAR 陈述稿 全量对齐 |
 
-### V0.3 目录
+### V0.4 增量（相对 V0.3）
 
-```
-project/
-├── config/
-│   ├── api_config.json
-│   ├── database.json
-│   ── init_database_v0.sql
-├── modules/
-│   ├── 1.竞品商品数据采集/
-│   │   ├── 商品数据采集.flow
-│   │   ├── 下一页按钮翻页.flow
-│   │   └── product_collect.py
-│   ├── 2.竞品 SKU 数据采集/
-│   │   ├── B-SKU 数据采集.flow
-│   │   ├── B1-SKU 一维数据采集.flow
-│   │   ├── B2-SKU 二维数据采集.flow
-│   │   ├── api.py
-│   │   ├── api_to_datatable.py
-│   │   └── sku_write.py
-│   ├── 3.竞品信息数据清洗/
-│   │   ├── 子流程 C：数据清洗.flow
-│   │   └── product_clean.py
-│   ├── 4.竞品数据汇总/
-│   │   ├── product_ingest.py
-│   │   ├── sku_ingest.py
-│   │   ── report.py
-│   └── 5.竞品价格告警/
-│       └── alert.py
-├── docs/
-│   ├── agent/
-│   │   ├── INDEX.md
-│   │   └── 反爬增强方案.md
-│   └── portfolio/
-│       ├── 作品 1-淘宝竞品价格监控.md
-│       ├── 作品 1-STAR.md
-│       └── 项目总体设计.md
-└── runtime/
-    ├── logs/
-    ├── product_raw/
-    ├── product_cleaned/
-    ├── sku_raw/
-    ├── sku_cleaned/
-    └── reports/
-```
+1. **⓪ 自动化登录画布实装**（0-0 / 0-1 / 0-2 三画布，凭据走电脑本地文件、不入仓库）
+2. **⑥ BI 看板落地**：Metabase 单 jar + 4 视图 + 10 图，字段口径统一
+3. **⑤ 告警口径修正**：由"日历昨天"改为"该 SKU 上一次快照"——断跑多日不再漏报，
+   单日数据由 26 条（含幽灵）收敛为 4 条真实新低；消息含商品 ID 与上次日期
+4. **数据一致性修复**：
+   - `competitor_sku` 确认为 upsert 累积表（非"今日快照"），消费侧一律按
+     `DATE(crawl_time)=最近采集日` 圈定今日宇宙
+   - `sku_ingest._parse_datetime` 移除 `now()` 兜底（旧数据被盖今日戳的污染源）
+   - 视图与告警统一 `ROW_NUMBER` 去重，消除同批时间戳导致的重複预警
+5. **画布转录交叉审核**：发现并修复参数错传（secret 当 keyword）、
+   连续失败退出循环导致整批腰斩等问题
+
+### V0.4 已知边界
+
+- 单机单账号；未做分布式调度与代理池
+- 只适配淘宝 PC 详情页 DOM；平台改版需更新元素库
+- BI 仅本机只读（H2 配置库、127.0.0.1 监听）；对外分享前需迁移库 + 只读账号 + 反代
 
 ---
 
@@ -70,7 +47,8 @@ project/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
-| **V0** | 2026-07-21 | 三层架构基线，9 模块全链路，8 轮测试通过 |
+| V0 | 2026-07-21 | 三层架构基线，9 模块全链路，8 轮测试通过 |
 | V0.1 | 2026-08-04 | 新增 AI 模块（ai_advisor.py）：LLM 分析 + 离线降级 |
 | V0.2 | 2026-08-12 | 架构更新为 4 层（③清洗独立）；include_words 加 Z6pro/Z6Pro 型号过滤 |
-| **V0.3** | **2026-09-13** | **五层架构对齐实际文件树；移除未实现的 AI 模块；文档与落地代码一致** |
+| V0.3 | 2026-09-13 | 五层架构对齐实际文件树；移除未实现的 AI 模块；文档与落地代码一致 |
+| **V0.4** | **2026-10-25** | **登录画布 + BI 看板实装；告警口径重构；数据一致性三连修复；全链路真实跑通** |

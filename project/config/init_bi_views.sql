@@ -47,8 +47,12 @@ FROM (
 WHERE rn = 1;
 
 -- ============================================================
--- 2. v_price_change — 价格变动（带昨日价 / 历史最低 / 涨跌幅）
+-- 2. v_price_change — 价格变动（带上一快照价/日期 / 历史最低 / 涨跌幅）
 -- 直接用于「降价榜」「涨价预警」看板，Metabase 里筛 price_diff < 0 即可
+--
+-- 【口径】prev_* 取的是"该 SKU 上一个有采集的日期"（LAG 按 crawl_date 排序，
+-- 断跑多日会跨空窗回溯），与 ⑤ alert.py 的 last_price / last_date 完全同源。
+-- 2026-10-25 起两边一致；此前 alert 按"日历昨天"比对，断日会两边打架。
 -- ============================================================
 CREATE OR REPLACE VIEW v_price_change AS
 SELECT
@@ -58,6 +62,7 @@ SELECT
     sku_name,
     crawl_date,
     price,
+    LAG(crawl_date) OVER (PARTITION BY product_id, sku_name ORDER BY crawl_date) AS prev_date,
     LAG(price) OVER (PARTITION BY product_id, sku_name ORDER BY crawl_date) AS prev_price,
     price - LAG(price) OVER (PARTITION BY product_id, sku_name ORDER BY crawl_date) AS price_diff,
     ROUND(
@@ -81,6 +86,10 @@ FROM v_price_daily;
 -- ============================================================
 -- 3. v_sku_latest — SKU 当前快照（三档价格 + 折扣率）
 -- 用于商品明细表、价格分布、折扣力度分析
+--
+-- 【重要】competitor_sku 是 upsert 累积表：商品下架/退出监控后行不删，
+-- 不过滤会把陈旧行当"现价"（2026-10-25 实测 347 行里 228 行是旧批次）。
+-- 这里只保留"最近一个采集日"的行，与 ⑤ alert.py 的今日过滤同口径。
 -- ============================================================
 CREATE OR REPLACE VIEW v_sku_latest AS
 SELECT
@@ -98,7 +107,8 @@ SELECT
     p.detail_url,
     p.main_image_url
 FROM competitor_sku s
-JOIN competitor_product p ON p.product_id = s.product_id;
+JOIN competitor_product p ON p.product_id = s.product_id
+WHERE DATE(s.crawl_time) = (SELECT MAX(DATE(c2.crawl_time)) FROM competitor_sku c2);
 
 -- ============================================================
 -- 4. v_shop_summary — 店铺维度汇总
@@ -124,7 +134,7 @@ SELECT 'BI 视图创建完成' AS status;
 SELECT TABLE_NAME AS view_name FROM information_schema.VIEWS
 WHERE TABLE_SCHEMA = 'price_monitor' ORDER BY TABLE_NAME;
 
--- 校验：去重后与原始行数对比（应远小于 819）
+-- 校验：去重后与原始行数对比（去重后应远小于原始行数）
 SELECT
     (SELECT COUNT(*) FROM price_history) AS raw_rows,
     (SELECT COUNT(*) FROM v_price_daily) AS deduped_rows;

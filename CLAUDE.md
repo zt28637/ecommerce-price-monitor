@@ -37,7 +37,7 @@
 ## 项目主体 `project/`
 
 ```
-config/ · modules/{1.商品采集 2.SKU采集 3.反馈}/ · runtime/ · docs/
+config/ · modules/{0.登录 1.商品采集 2.SKU采集 3.清洗 4.汇总 5.告警 6.看板}/ · runtime/ · docs/
 ```
 
 - 配置：[project/config/](project/config/)
@@ -47,13 +47,15 @@ config/ · modules/{1.商品采集 2.SKU采集 3.反馈}/ · runtime/ · docs/
 
 ## 流程速查
 
-### 新版（独立于旧版 ABCD）
-
 | 流程 | 内容 | 模块 |
 |------|------|------|
-| ① 商品数据采集 | 影刀采集 → Python 清洗 → Python 录入 MySQL | [1.竞品商品数据采集](project/modules/1.竞品商品数据采集/) |
-| ② 竞品SKU数据采集 | API 采集 → 网页兜底 → SKU 清洗 → 录入 | [2.竞品SKU数据采集](project/modules/2.竞品SKU数据采集/) |
-| ③ 竞品数据反馈 | 日报导出 + 钉钉价格预警 | [3.竞品数据反馈](project/modules/3.竞品数据反馈/) |
+| ⓪ 自动化登录 | 影刀画布：凭据设置 → 模拟登录 | [0.淘宝自动化登录](project/modules/0.淘宝自动化登录/) |
+| ① 商品数据采集 | 影刀采集 → 自定义数据账本 | [1.竞品商品数据采集](project/modules/1.竞品商品数据采集/) |
+| ② 竞品SKU数据采集 | API 优先 → 网页兜底 → 清洗 → 录入 | [2.竞品SKU数据采集](project/modules/2.竞品SKU数据采集/) |
+| ③ 数据清洗 | product_clean：过滤 + 13 列标准表 | [3.竞品数据清洗](project/modules/3.竞品数据清洗/) |
+| ④ 数据汇总 | 入库三表 + 日报 Excel | [4.竞品数据汇总](project/modules/4.竞品数据汇总/) |
+| ⑤ 价格告警 | 历史新低 / 较上次降价 → 钉钉 | [5.竞品价格告警](project/modules/5.竞品价格告警/) |
+| ⑥ BI 看板 | Metabase 4 视图 + 10 图 | [6.竞品数据看板](project/modules/6.竞品数据看板/) |
 
 ---
 

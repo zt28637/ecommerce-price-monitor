@@ -8,7 +8,7 @@
   1. 同一商品的多行 SKU 自动合并商品级列
   2. 嵌入商品主图（D 列）和 SKU 属性图（G 列）
   3. 表头加粗 + 浅蓝底色 + 列宽适配
-  4. 价格列居中，文字列垂直居中
+  4. 商品级合并列顶对齐（一格占多行的信息贴块首），价格列水平居中
 
 输入：product_clean.py 输出的 13 列清洗 Excel（runtime/product_clean/）
 输出：runtime/reports/ 下的日报 Excel
@@ -201,15 +201,16 @@ def _format_sheet(worksheet, last_row):
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # 数据行
+    # 数据行：商品级列（MERGE_COLS，一格占多行）一律顶对齐，SKU 级单行格保持垂直居中
     for r in range(2, last_row + 1):
         worksheet.row_dimensions[r].height = 80
         for c in range(1, 14):
             cell = worksheet.cell(r, c)
+            vert = "top" if c in MERGE_COLS else "center"
             if c in _PRICE_COLS:
-                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.alignment = Alignment(horizontal="center", vertical=vert)
             else:
-                cell.alignment = Alignment(vertical="center", wrap_text=True)
+                cell.alignment = Alignment(vertical=vert, wrap_text=True)
 
 
 # ============================================================

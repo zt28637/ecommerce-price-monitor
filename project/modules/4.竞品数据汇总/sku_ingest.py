@@ -82,7 +82,13 @@ def _parse_date(raw, fallback=None) -> date:
 
 
 def _parse_datetime(raw) -> datetime:
-    """采集时间 → datetime 对象"""
+    """采集时间 → datetime 对象
+
+    ⚠️ 绝不能用 now() 兜底：API 分支画布写的采集时间是 date-only（"2026-10-08"），
+    重放旧数据表时 now() 会把下架商品盖上"今天"的戳，污染 competitor_sku 的
+    今日过滤（2026-10-25 实测：17:15 旧批重入库，36 行幽灵"今日行"）。
+    解析不出时刻时诚实返回当日 00:00，与 _parse_date 同源自洽。
+    """
     text = str(raw or "").strip()
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S",
                 "%Y/%m/%d %H:%M:%S", "%Y年%m月%d日%H时%M分"):
@@ -90,7 +96,12 @@ def _parse_datetime(raw) -> datetime:
             return datetime.strptime(text, fmt)
         except Exception:
             continue
-    return datetime.now()
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"):
+        try:
+            return datetime.strptime(text[:10], fmt)
+        except Exception:
+            continue
+    return datetime.combine(_parse_date(raw), datetime.min.time())  # 兜底=日期0点，不是现在
 
 
 SQL_SKU_UPSERT = """

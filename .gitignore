@@ -18,6 +18,8 @@ project/runtime/**
 
 # 敏感：环境与凭证（含 token/webhook），永不入库
 project/config/collect_env.json
+project/config/api_config.json
+project/config/database.json
 .env
 .env.*
 
