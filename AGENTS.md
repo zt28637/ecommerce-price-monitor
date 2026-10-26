@@ -73,6 +73,12 @@ L5 输出   日报│预警│看板    → 一律读视图，并行只读
 
 ## 硬性约束
 
+### 凭据永不入库（硬性）
+
+- `project/config/database.json` / `api_config.json` / `collect_env.json` / `.env` **一律 gitignore**，仓库只放 `*.example.json` 占位模板
+- **提交前必跑**：`python project/tools/check_secrets.py`（`--staged` 只查暂存区），退出码非 0 不许提交
+- 2026-10-26 事故：MySQL 密码与 JustOneAPI token 曾随两个配置文件进入历史并被推送 → 已删除仓库重建、重写历史剔除、全平台轮换凭据；此后以本规则为准
+
 ### 掩码价处理
 
 - API（JustOneAPI）返回的价格通常是真实值，不经过人工
