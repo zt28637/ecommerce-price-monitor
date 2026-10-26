@@ -1,5 +1,5 @@
-# main  (flow_id=main, 组=—, 块数=27)
-# 转录时间 2026-10-08 17:30 · 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
+# main  (flow_id=main, 组=—, 块数=26)
+# 转录时间 2026-10-26 10:58 · 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
 # 指令名/参数名=影刀官方内置指令目录（见 tools/sb_blocks_zh.json）· 行尾[英文ID]=机器名，可 grep
 
 001  调用流程  模块名称=process65  →00自动化登录  [process.run]
@@ -13,27 +13,38 @@
 009  获取当前日期时间  [datetime.now]
 010  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
 011  数据表格导出  文件夹=custom  文件夹路径=F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\project\runtime\product_alllraw  文件名称=拼接=[竞品_;变量=当前时间;.xlsx]  export_header=表达式=True  [programing.databook.export_data]
-012  设置变量  变量类型=str  变量值=表达式=f"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/runtime/product_clean/竞品_{当前时间}.xlsx"  [programing.variable]
-013  获取当前日期时间  [datetime.now]
-014  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
-015  调用模块  模块名称=product_clean  方法名称=main  方法参数列表=group_array=[filepath=variable=竞品原始Excel;;timestamp=variable=当前时间;out_path=variable=竞品清洗Excel;]  返回值类型=any  [process.invoke_module]
+012  导出日志  文件夹路径=F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\project\runtime\logs  文件名称=日志文件.txt  [programing.exportlog]
+013  设置变量  变量类型=str  变量值=表达式=f"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/runtime/product_clean/竞品_{当前时间}.xlsx"  [programing.variable]
+014  获取当前日期时间  [datetime.now]
+015  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
 016  设置变量  变量类型=str  变量值=表达式=f"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/runtime/product_clean/竞品_{当前时间}.xlsx"  [programing.variable]
-017  获取当前日期时间  [datetime.now]
-018  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
-019  调用模块  模块名称=report  方法名称=main  方法参数列表=group_array=[excel_path=variable=竞品清洗Excel;output_path=variable=竞品清洗Excel;;timestamp=variable=当前时间]  返回值类型=any  [process.invoke_module]
-020  设置变量  变量类型=str  变量值=表达式=f"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/runtime/report/竞品_{当前时间}.xlsx"  [programing.variable]
-021  获取当前日期时间  [datetime.now]
-022  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
-023  调用模块  模块名称=report  方法名称=main  方法参数列表=group_array=[excel_path=variable=竞品清洗Excel;output_path=variable=竞品报表Excel;;timestamp=variable=当前时间]  返回值类型=any  [process.invoke_module]
-024  设置变量  变量类型=str  变量值=F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/config/database.json  [programing.variable]
-025  调用模块  模块名称=product_ingest  方法名称=main  方法参数列表=group_array=[cleaned_path=variable=竞品清洗Excel;config_path=variable=config_path]  返回值类型=any  [process.invoke_module]
-026  调用模块  模块名称=sku_ingest  方法名称=main  方法参数列表=group_array=[cleaned_path=variable=竞品清洗Excel;config_path=variable=config_path]  返回值类型=any  [process.invoke_module]
-027  调用模块  模块名称=alert  方法名称=main  方法参数列表=group_array=[config_path=variable=config_path;webhook_url=variable=glv['dingtalk_webhook'];keyword=variable=glv['dingtalk_secret'];drop_pct=expression=5.0]  返回值类型=any  [process.invoke_module]
+017  调用模块  模块名称=product_clean  方法名称=main  方法参数列表=group_array=[filepath=variable=竞品原始Excel;;timestamp=variable=当前时间;out_path=variable=竞品清洗Excel;]  返回值类型=any  [process.invoke_module]
+018  添加备注说明  备注说明=必须人工检验清洗结果后进行入库等操作。  [programing.comment]
+019  获取当前日期时间  [datetime.now]
+020  日期时间转换为文本  日期时间=变量=当前时间  时间格式=%Y年%m月%d日%H时%M分  [datetime.to_string]
+021  设置变量  变量类型=str  变量值=表达式=f"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/runtime/report/竞品_{当前时间}.xlsx"  [programing.variable]
+022  调用模块  模块名称=report  方法名称=main  方法参数列表=group_array=[excel_path=variable=竞品清洗Excel;output_path=variable=竞品报表Excel;;timestamp=variable=当前时间]  返回值类型=any  [process.invoke_module]
+023  设置变量  变量类型=str  变量值=F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/config/database.json  [programing.variable]
+024  调用模块  模块名称=product_ingest  方法名称=main  方法参数列表=group_array=[cleaned_path=variable=竞品清洗Excel;config_path=variable=config_path]  返回值类型=any  [process.invoke_module]
+025  调用模块  模块名称=sku_ingest  方法名称=main  方法参数列表=group_array=[cleaned_path=variable=竞品清洗Excel;config_path=variable=config_path]  返回值类型=any  [process.invoke_module]
+026  调用模块  模块名称=alert  方法名称=main  方法参数列表=group_array=[config_path=variable=config_path;webhook_url=variable=glv['dingtalk_webhook'];keyword="竞品";secret=variable=glv['dingtalk_secret'];drop_pct=expression=5.0]  返回值类型=any  [process.invoke_module]
 
 ## 审核疑点（2026-09-30 · 对照模块 .py 签名交叉核对，仅记录，未改画布）
+
+> **复核 2026-10-26（画布 27→26 步，状态更新）**
+> - ✅ **027 alert 参数已修复**：现为 `keyword="竞品"` + `secret=glv['dingtalk_secret']`（密钥不再进标题、加签显式传参）
+> - ✅ **019 重复且有害的 report 调用已删**：现只保留一次 report（022，output_path=竞品报表Excel），清洗产物不再被覆盖
+> - ✅ **011 路径拼写已过时**：画布与磁盘现均为 `product_alllraw`（双 l），目录一致，无风险
+> - ⚠️ **012/016 重复赋值仍在**（冗余无害）
+> - ➕ 新增 012 `导出日志`（runtime/logs/日志文件.txt）；018 备注"必须人工检验清洗结果后进行入库等操作"
+
+<details><summary>2026-09-30 原始记录（留档）</summary>
+
 - **011 路径拼写**：导出目录 `product_alllraw`（3个l），磁盘实际为 `runtime/product_allraw` → 会静默新建错误目录，下游按实际名找不到文件
 - **019 多余且有害的 report 调用**：`output_path=input 竞品清洗Excel`（report.py 会覆盖清洗产物），023 再调用时读到的已是被日报覆盖的文件而非 13 列清洗表；015→019→023 三连里 019 疑似返工遗留，应删（023 单独保留即可，或改 output_path）
 - **027 alert keyword 传错**：alert.py 的 `keyword` 是"搜索关键词（拼消息标题）"，画布传了 `glv['dingtalk_secret']`（钉钉加签密钥）→ 标题出现密钥字样=泄露；且 alert.py 本身不实现加签，机器人若为"加签"型则发送会 401（若是"自定义关键词"型，此参数应传关键词文本而非 secret）
 - **012/016 重复赋值**：`竞品清洗Excel` 同一表达式赋值两次（冗余无害）
 
-> 复核 2026-10-08（重转录后逐条对照新画布）：**四条疑点在原位置全部仍成立**（011/012/016/019/023/027 块号未变）。
+> 复核 2026-10-08（重转录后逐条对照新画布）：四条疑点在原位置全部仍成立（011/012/016/019/023/027 块号未变）。
+
+</details>

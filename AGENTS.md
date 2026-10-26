@@ -112,6 +112,9 @@ DDL：[project/config/init_database_v0.sql](project/config/init_database_v0.sql)
 
 ## 任务路由
 
+> ⚠️ `project/docs/` 是**本地文档目录，不入 git**（含作品/面试向内容）。下表指向它的链接仅在本地有效；
+> GitHub 上可读的文档是：README、VERSION、AGENTS、`project/modules/` 下的画布转录与 6-x 看板教程。
+
 | 你要做… | 看这里 |
 |---------|--------|
 | **改架构 / 加输出形态 / 定接缝契约** | **[project/docs/系统架构.md](project/docs/系统架构.md)** ← 架构唯一真源 |

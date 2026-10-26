@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import sb_mcp
 
-MOD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "modules")
+MOD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "modules")
 CATALOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_blocks_zh.json")
 
 # flow_id -> (相对 project/modules 的画布路径)。新增画布在此登记。

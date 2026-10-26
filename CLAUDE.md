@@ -8,7 +8,7 @@
 
 1. `../MEMORY.md`
 2. 本文 + `AGENTS.md`
-3. [project/docs/agent/INDEX.md](project/docs/agent/INDEX.md) → 具体文件
+3. [project/docs/agent/INDEX.md](project/docs/agent/INDEX.md) → 具体文件（⚠️ docs/ 本地维护、不入 git）
 
 ---
 
@@ -55,7 +55,7 @@ config/ · modules/{0.登录 1.商品采集 2.SKU采集 3.清洗 4.汇总 5.告�
 | ③ 数据清洗 | product_clean：过滤 + 13 列标准表 | [3.竞品数据清洗](project/modules/3.竞品数据清洗/) |
 | ④ 数据汇总 | 入库三表 + 日报 Excel | [4.竞品数据汇总](project/modules/4.竞品数据汇总/) |
 | ⑤ 价格告警 | 历史新低 / 较上次降价 → 钉钉 | [5.竞品价格告警](project/modules/5.竞品价格告警/) |
-| ⑥ BI 看板 | Metabase 4 视图 + 10 图 | [6.竞品数据看板](project/modules/6.竞品数据看板/) |
+| ⑥ BI 看板 | Metabase 4 视图 + 12 图 | [6.竞品数据看板](project/modules/6.竞品数据看板/) |
 
 ---
 
