@@ -247,7 +247,10 @@ def build_items(rows):
         conflict = any("key_conflict" in (r.get("flags") or []) for r in rs)
         priced = [r for r in rs if r["price"] is not None
                   and not (conflict and "key_conflict" in (r.get("flags") or []))]
-        prices = [r["price"] for r in priced]
+        # 0 价 SKU（赠品/占位/"联系客服"）不是有效价格点：只参与有价计数，
+        # 不进 min/max —— 否则 min_sku_price=0 会被 price_nonpositive 判红，
+        # 一个占位 SKU 就能把整个商品从当天数据里抹掉。
+        prices = [r["price"] for r in priced if r["price"] > 0]
         flags = list(pick["flags"])
         if not pick["price_complete"] and "partial_sku" not in flags:
             flags.append("partial_sku")

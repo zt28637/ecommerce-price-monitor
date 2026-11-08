@@ -199,10 +199,21 @@ def split_flags(flags):
 # 不是质量问题。上游标记进 source_flags，质量列只看 flags，避免报表误读。
 KNOWN_QUALITY_FLAGS = set(RED_RULES) | set(YELLOW_RULES) | set(INFO_RULES)
 
+# 上游（详情解析 parse_detail / collect_detail）的旗标名与清洗层词表不一致：
+# 不先归一化，partial_sku_price 等旗标会整包落进 source_flags，
+# 结果"价格不完整的 SKU 仍判 green"，而 clean_merge 里对应的分支也永远走不到。
+# no_sku 不在此表：它是"详情没给 SKU 列表、用商品价兜底单规格"的正常形态，
+# 不是缺失，保持信息级。
+FLAG_ALIASES = {
+    "partial_sku_price": "partial_sku",    # 部分 SKU 无价
+    "sku_count_mismatch": "partial_sku",   # 解析出的 SKU 数与页面不一致
+    "masked_price": "price_missing",       # 价格被打码 ***
+}
+
 
 def split_quality_flags(flags):
-    """-> (quality_flags, source_flags)"""
-    allf = split_flags(flags)
+    """-> (quality_flags, source_flags)；上游旗标先归一化到本层词表。"""
+    allf = [FLAG_ALIASES.get(f, f) for f in split_flags(flags)]
     quality = [f for f in allf if f in KNOWN_QUALITY_FLAGS]
     source = [f for f in allf if f not in KNOWN_QUALITY_FLAGS]
     return quality, source
