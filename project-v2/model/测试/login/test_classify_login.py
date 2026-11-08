@@ -33,7 +33,13 @@ class FakePage:
     def run_cdp(self, *args, **kwargs):
         if self.cookies is None:
             raise RuntimeError("cdp unavailable")
-        return {"cookies": [{"name": n} for n in self.cookies]}
+        # 认证判据现在要求 cookie 有值：淘宝登出常把值置空而保留名字。
+        # 传 ("cookie2", "") 这种二元组即"名字在、值为空"。
+        out = []
+        for c in self.cookies:
+            name, value = c if isinstance(c, tuple) else (c, "v")
+            out.append({"name": name, "value": value})
+        return {"cookies": out}
 
     def ele(self, locator, *args, **kwargs):
         if locator == ".has-login-title":
@@ -71,6 +77,10 @@ CASES = [
      FakePage(nick=False, cookies=["cookie2"]), HOME, "not_login"),
     ("C14", "首页 + CDP 异常回退 tracknick",
      FakePage(nick=True, cookies=None), HOME, "auto"),
+    ("C15", "首页 + cookie 名在但值为空（登出残留）算未登录",
+     FakePage(nick=True, cookies=[("cookie2", ""), ("unb", "")]), HOME, "not_login"),
+    ("C16", "首页 + cookie2 有值、另一个为空 → 不足两个有效",
+     FakePage(nick=False, cookies=[("cookie2", "v"), ("unb", "")]), HOME, "not_login"),
 ]
 
 

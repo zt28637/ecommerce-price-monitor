@@ -38,13 +38,18 @@ def _body_text(page, limit=5000):
 
 
 def _visible_dom_hit(page, selector=RISK_DOM_SELECTOR):
-    """选择器命中且元素真实可见（排除预留的隐藏容器）。"""
+    """选择器命中且元素真实可见（排除预留的隐藏容器）。
+
+    可见性用 getClientRects 而不是 offsetParent：淘宝滑块/弹窗常用
+    position:fixed，而 fixed 元素的 offsetParent 恒为 null —— 用 offsetParent
+    会把真正的风控弹层判成"不可见"，风险页识别直接失效。
+    """
     try:
         return bool(page.run_js(
             "var e=document.querySelector(%s);"
-            "if(!e) return false;"
+            "if(!e || !e.getClientRects().length) return false;"
             "var s=getComputedStyle(e);"
-            "return e.offsetParent!==null && s.display!=='none' && s.visibility!=='hidden';"
+            "return s.display!=='none' && s.visibility!=='hidden';"
             % json.dumps(selector)))
     except Exception:
         return False

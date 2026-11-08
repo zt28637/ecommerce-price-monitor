@@ -24,7 +24,10 @@ def _auth_cookies(page):
     try:
         data = page.run_cdp("Network.getCookies",
                             urls=["https://www.taobao.com/"])
-        names = {c.get("name") for c in (data or {}).get("cookies", [])}
+        # 只认有值的 cookie：淘宝登出/被踢常常把值置空而不删除名字，
+        # 只比对名字会把"残留空 cookie"当成有效会话，被踢检测和预算保护就永远不触发。
+        names = {c.get("name") for c in (data or {}).get("cookies", [])
+                 if str(c.get("value") or "").strip()}
         return names & set(AUTH_COOKIES)
     except Exception:
         return None

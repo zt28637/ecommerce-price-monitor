@@ -369,11 +369,16 @@ def _failure_reason(page):
     """提交后仍没登录时，区分风控/验证码/滑块/密码错误。"""
     js = """
     return (function () {
+      // 可见性不能用 offsetParent 判断：position:fixed 的滑块/弹窗 offsetParent 恒为 null，
+      // 会被当成隐藏；getClientRects 对 fixed 元素有效，再叠加 display/visibility。
+      function vis(e) {
+        if (!e || !e.getClientRects().length) return false;
+        var st = getComputedStyle(e);
+        return st.display !== 'none' && st.visibility !== 'hidden';
+      }
       if (location.href.indexOf('sec.taobao.com') >= 0) return 'risk';
-      var c = document.querySelector('#fm-login-checkcode');
-      if (c && c.offsetParent !== null) return 'captcha';
-      var s = document.querySelector('#nc_1_n1z, .nc-container, #baxia-dialog');
-      if (s) return 'slider';
+      if (vis(document.querySelector('#fm-login-checkcode'))) return 'captcha';
+      if (vis(document.querySelector('#nc_1_n1z, .nc-container, #baxia-dialog'))) return 'slider';
       return 'password_failed';
     })()
     """
@@ -494,6 +499,17 @@ def _attempt_password(page, st, budget, cred):
         if page_state == "confirm":
             _quick_enter(page)
             _wait_leave_login(page, QUICK_ENTER_WAIT)
+            # 点了「快速进入」不等于登录成功：按钮改版 / 被拦时会停在登录域。
+            # 不复核就写台账、清冷却、烧掉 24h 预算，下游却在未登录浏览器上继续跑。
+            try:
+                page_state = classify_login.classify_login(page, page.url or "")
+            except Exception:
+                page_state = "structure_error"
+            if page_state != "auto":
+                return _result("cold_down", "password", "structure_error",
+                               need_manual=True, budget=budget,
+                               detail="密码已通过，但停在 %s（未离开登录域），转人工"
+                                      % page_state)
         now = _now()
         new_state = record_login(now, st, "password")
         new_state["xlly_expire"] = _xlly_expire(page)
