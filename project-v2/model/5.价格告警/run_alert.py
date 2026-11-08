@@ -38,7 +38,8 @@ import alert_render
 import db
 import notify
 
-PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, ".."))
+# _MODULE_DIR 是 project-v2/model/5.价格告警，退两层才到 project-v2/
+PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
 DEFAULT_OUT_ROOT = os.path.join(PROJECT_DIR, "runtime", "alerts")
 
 

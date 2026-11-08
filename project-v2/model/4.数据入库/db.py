@@ -12,8 +12,9 @@ import os
 import pymysql
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+# _MODULE_DIR 已到 project-v2/model/4.数据入库，要退两层才是 project-v2/
 DEFAULT_CONFIG = os.path.normpath(os.path.join(
-    _MODULE_DIR, "..", "config", "database.json"))
+    _MODULE_DIR, "..", "..", "config", "database.json"))
 
 
 def load_config(path=None):

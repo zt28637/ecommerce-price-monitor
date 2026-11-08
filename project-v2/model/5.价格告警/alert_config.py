@@ -14,7 +14,8 @@ import os
 import re
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, ".."))
+# _MODULE_DIR 是 project-v2/model/5.价格告警，退两层才到 project-v2/
+PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
 DEFAULT_CONFIG = os.path.join(PROJECT_DIR, "config", "alert.json")
 LOCAL_CONFIG = os.path.join(PROJECT_DIR, "config", "alert_local.json")
 PROMO_CONFIG = os.path.join(PROJECT_DIR, "config", "promo_dates.json")

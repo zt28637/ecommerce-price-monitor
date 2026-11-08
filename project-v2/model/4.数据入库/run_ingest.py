@@ -37,8 +37,9 @@ import ingest_dim
 import ingest_fact
 import schema
 
+# 退两层才是 project-v2/（run_clean 写的是 <project-v2>/runtime/clean）
 DEFAULT_CLEAN_ROOT = os.path.normpath(os.path.join(
-    _MODULE_DIR, "..", "runtime", "clean"))
+    _MODULE_DIR, "..", "..", "runtime", "clean"))
 
 OK_STATUS = ("auto_pass", "approved")
 BAD_STATUS = ("rejected",)

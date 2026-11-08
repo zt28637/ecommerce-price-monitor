@@ -54,19 +54,26 @@ def _load_module(name, path):
 
 
 def generate_list_raw(html_path, ts, root, config_path=None):
-    """parse_list + filter_item -> list_raw/<目标>/<ts>.jsonl，返回文件路径。"""
+    """parse_list + filter_product -> list_raw/<关键词>/<ts>.jsonl，返回文件路径。
+
+    产出与 collect_list 保持一致：只写通过过滤的行（落盘契约见
+    docs/列表页采集-待办清单 L-05，清洗层对缺 passed 的行视为通过）。
+    """
     parse_list = _load_module("parse_list", os.path.join(LIST_MODULE_DIR, "parse_list.py"))
-    filter_item = _load_module("filter_item", os.path.join(LIST_MODULE_DIR, "filter_item.py"))
+    filter_product = _load_module(
+        "filter_product", os.path.join(LIST_MODULE_DIR, "filter_product.py"))
 
-    ruleset = filter_item.load_rules(config_path or DEFAULT_CONFIG)
+    cfg = config_path or DEFAULT_CONFIG
+    ruleset = filter_product.load_rules(cfg)
     with open(html_path, "r", encoding="utf-8", errors="replace") as f:
-        rows = parse_list.parse_list_html(f.read())
-    marked = filter_item.filter_rows(rows, ruleset)["all"]
+        rows = parse_list.parse_list(f.read())
+    passed = filter_product.filter(rows, cfg)
 
-    out_dir = export.ensure_dir(os.path.join(root, "list_raw", ruleset["name"]))
+    out_dir = export.ensure_dir(os.path.join(root, "list_raw", ruleset["keyword"]))
     out_path = os.path.join(out_dir, ts + ".jsonl")
-    export.write_jsonl(out_path, marked)
-    _log("[清洗] 由 HTML 生成 list_raw：%s（%d 行）" % (out_path, len(marked)))
+    export.write_jsonl(out_path, passed)
+    _log("[清洗] 由 HTML 生成 list_raw：%s（解析 %d 行，通过 %d 行）"
+         % (out_path, len(rows), len(passed)))
     return out_path
 
 
