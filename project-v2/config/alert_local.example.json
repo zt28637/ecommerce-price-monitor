@@ -1,0 +1,13 @@
+{
+  "channels": {
+    "feishu": {
+      "url": "<飞书自定义机器人 webhook>",
+      "secret": "<飞书加签密钥，无加签留空>"
+    },
+    "dingtalk": {
+      "url": "<钉钉自定义机器人 webhook>",
+      "secret": "<钉钉加签密钥，无加签留空>",
+      "keyword": "<钉钉自定义关键词，无则留空>"
+    }
+  }
+}
