@@ -772,91 +772,99 @@ def main(args=None, **kwargs):
             _log("[详情] 解析失败：%s → %s" % (result.get("reason"), path))
             continue
 
-        # 部分价 / 0 价：data.get 一次补全；受预算/冷却/暂停约束
-        if (fill_sku_prices or max_sku_calls) and result.get("sku_count") and not result.get("price_complete"):
-            now = time.time()
-            if api_risk or now < float(api_state.get("risk_until") or 0):
-                api_skipped_cooldown += 1
-                _log("[详情] API 冷却中，跳过补价：%s" % result["product_id"])
-            elif api_run_calls >= max_api_run or int(api_state.get("calls") or 0) >= max_api_day:
-                api_skipped_budget += 1
-                _log("[详情] API 预算用尽（run=%d/%d day=%d/%d），跳过补价：%s"
-                     % (api_run_calls, max_api_run, int(api_state.get("calls") or 0),
-                        max_api_day, result["product_id"]))
-            else:
-                remaining = min(max_api_run - api_run_calls,
-                                max_api_day - int(api_state.get("calls") or 0))
-                prices, api_meta = collect_sku_prices(
-                    page, result["product_id"], result["skus"],
-                    max_calls=max_sku_calls,
-                    interval=(sku_interval_min, sku_interval_max),
-                    call_budget=remaining,
-                    pause_every=api_pause_every,
-                    pause_seconds=api_pause_seconds,
-                    retries=api_retry_times,
-                    use_all_api=use_data_get,
-                )
-                used = int(api_meta.get("calls") or 0)
-                api_run_calls += used
-                api_retries += int(api_meta.get("retries") or 0)
-                api_state["calls"] = int(api_state.get("calls") or 0) + used
-                if api_meta.get("data_get_ok"):
-                    data_get_ok += 1
-                    data_get_fail_streak = 0
-                elif api_meta.get("all_err") and use_data_get:
-                    data_get_fail += 1
-                    data_get_fail_streak += 1
-                    if data_get_fail_streak >= data_get_fail_limit:
-                        use_data_get = False
-                        _log("[详情] data.get 连续失败 %d 次，本轮切换 adjust" % data_get_fail_streak)
-                if api_meta.get("api") and not api_meta.get("data_get_ok"):
-                    adjust_used += 1
-                if prices:
-                    api_products += 1
-                if api_meta.get("risk"):
-                    api_risk = True
-                    api_state["risk_until"] = now + risk_cooldown_min * 60
-                _save_api_state(api_state_path, api_state)
-                if prices:
-                    for s in result["skus"]:
-                        p = prices.get(s["sku_id"])
-                        if p:
-                            try:
-                                s["price"] = float(p)
-                            except (TypeError, ValueError):
-                                pass
-                    priced = [s for s in result["skus"] if s["price"] is not None]
-                    result["price_coverage"] = "%d/%d" % (len(priced), len(result["skus"]))
-                    result["price_complete"] = len(priced) == len(result["skus"])
-                    if "sku_price_api" not in result["flags"]:
-                        result["flags"].append("sku_price_api")
-                    if result["price_complete"]:
-                        result["flags"] = [f for f in result["flags"] if f != "partial_sku_price"]
-                _log("[详情] SKU 价补全：api=%s calls=%d coverage=%s flags=%s"
-                     % (api_meta.get("api"), used, result["price_coverage"], result["flags"]))
-
-        # 正常：存 ICE JSON + 展开 SKU 写 JSONL
+        # 单个商品的处理整段兜底：补价/落盘/写 JSONL 任一环节抛错，
+        # 都不能终结整轮（否则剩余商品不采、run_log 也不写）。
         try:
-            ice = parse_detail.extract_ice(html)
-            detail_storage.save_ice(result["product_id"], ice, run)
+            # 部分价 / 0 价：data.get 一次补全；受预算/冷却/暂停约束
+            if (fill_sku_prices or max_sku_calls) and result.get("sku_count") and not result.get("price_complete"):
+                now = time.time()
+                if api_risk or now < float(api_state.get("risk_until") or 0):
+                    api_skipped_cooldown += 1
+                    _log("[详情] API 冷却中，跳过补价：%s" % result["product_id"])
+                elif api_run_calls >= max_api_run or int(api_state.get("calls") or 0) >= max_api_day:
+                    api_skipped_budget += 1
+                    _log("[详情] API 预算用尽（run=%d/%d day=%d/%d），跳过补价：%s"
+                         % (api_run_calls, max_api_run, int(api_state.get("calls") or 0),
+                            max_api_day, result["product_id"]))
+                else:
+                    remaining = min(max_api_run - api_run_calls,
+                                    max_api_day - int(api_state.get("calls") or 0))
+                    prices, api_meta = collect_sku_prices(
+                        page, result["product_id"], result["skus"],
+                        max_calls=max_sku_calls,
+                        interval=(sku_interval_min, sku_interval_max),
+                        call_budget=remaining,
+                        pause_every=api_pause_every,
+                        pause_seconds=api_pause_seconds,
+                        retries=api_retry_times,
+                        use_all_api=use_data_get,
+                    )
+                    used = int(api_meta.get("calls") or 0)
+                    api_run_calls += used
+                    api_retries += int(api_meta.get("retries") or 0)
+                    api_state["calls"] = int(api_state.get("calls") or 0) + used
+                    if api_meta.get("data_get_ok"):
+                        data_get_ok += 1
+                        data_get_fail_streak = 0
+                    elif api_meta.get("all_err") and use_data_get:
+                        data_get_fail += 1
+                        data_get_fail_streak += 1
+                        if data_get_fail_streak >= data_get_fail_limit:
+                            use_data_get = False
+                            _log("[详情] data.get 连续失败 %d 次，本轮切换 adjust" % data_get_fail_streak)
+                    if api_meta.get("api") and not api_meta.get("data_get_ok"):
+                        adjust_used += 1
+                    if prices:
+                        api_products += 1
+                    if api_meta.get("risk"):
+                        api_risk = True
+                        api_state["risk_until"] = now + risk_cooldown_min * 60
+                    _save_api_state(api_state_path, api_state)
+                    if prices:
+                        for s in result["skus"]:
+                            p = prices.get(s["sku_id"])
+                            if p:
+                                try:
+                                    s["price"] = float(p)
+                                except (TypeError, ValueError):
+                                    pass
+                        priced = [s for s in result["skus"] if s["price"] is not None]
+                        result["price_coverage"] = "%d/%d" % (len(priced), len(result["skus"]))
+                        result["price_complete"] = len(priced) == len(result["skus"])
+                        if "sku_price_api" not in result["flags"]:
+                            result["flags"].append("sku_price_api")
+                        if result["price_complete"]:
+                            result["flags"] = [f for f in result["flags"] if f != "partial_sku_price"]
+                    _log("[详情] SKU 价补全：api=%s calls=%d coverage=%s flags=%s"
+                         % (api_meta.get("api"), used, result["price_coverage"], result["flags"]))
+
+            # 正常：存 ICE JSON + 展开 SKU 写 JSONL
+            try:
+                ice = parse_detail.extract_ice(html)
+                detail_storage.save_ice(result["product_id"], ice, run)
+            except Exception as e:
+                detail_storage.save_html_gz(result["product_id"], html, run)
+                errors.append({"url": url, "reason": "ice_save_error: %s" % e})
+                _log("[详情] ICE 落盘失败：%s" % e)
+
+            rows = _flatten(result, crawl_date, run["ts"], url)
+            rows_total = detail_storage.append_rows(rows, run)
+            done += 1
+            if "partial_sku_price" in (result.get("flags") or []):
+                partial += 1
+
+            # 设计 §2.4e 的异常触发：SKU 自检不过 / 价格全空
+            if ("sku_count_mismatch" in result.get("flags", [])
+                    or "masked_price" in result.get("flags", [])):
+                detail_storage.save_html_gz(result["product_id"], html, run)
+
+            _log("[详情] %s | %d SKU | 价格覆盖 %s | flags=%s"
+                 % (result["product_id"], result["sku_count"], result["price_coverage"], result["flags"]))
         except Exception as e:
-            detail_storage.save_html_gz(result["product_id"], html, run)
-            errors.append({"url": url, "reason": "ice_save_error: %s" % e})
-            _log("[详情] ICE 落盘失败：%s" % e)
-
-        rows = _flatten(result, crawl_date, run["ts"], url)
-        rows_total = detail_storage.append_rows(rows, run)
-        done += 1
-        if "partial_sku_price" in (result.get("flags") or []):
-            partial += 1
-
-        # 设计 §2.4e 的异常触发：SKU 自检不过 / 价格全空
-        if ("sku_count_mismatch" in result.get("flags", [])
-                or "masked_price" in result.get("flags", [])):
-            detail_storage.save_html_gz(result["product_id"], html, run)
-
-        _log("[详情] %s | %d SKU | 价格覆盖 %s | flags=%s"
-             % (result["product_id"], result["sku_count"], result["price_coverage"], result["flags"]))
+            failed += 1
+            errors.append({"url": url, "reason": "item_error: %s" % e})
+            _log("[详情] 商品处理异常，跳过：%s（%s）" % (url, e))
+            continue
 
         if i < len(urls) and interval_max > 0:
             time.sleep(random.uniform(interval_min, max(interval_min, interval_max)))

@@ -94,9 +94,23 @@ def save_ice(product_id, ice, run):
 
 
 def save_html_gz(product_id, html, run):
-    """异常时保存整页 HTML（gzip）+ 回读校验。返回 (path, ok)。"""
-    d = _ensure_dir(os.path.join(run["root"], "detail_html", str(product_id or "unknown")))
-    path = os.path.join(d, run["day"] + ".html.gz")
+    """异常时保存整页 HTML（gzip）+ 回读校验。返回 (path, ok)。
+
+    正常商品按 <product_id>/<day>.html.gz 覆盖当日最新即可；但占位键
+    （unknown / risk_N）同一天会有多份，只按天命名会让后一份覆盖前一份，
+    取证时只剩最后一个失败商品。占位键改成带轮次 + 序号。
+    """
+    key = str(product_id or "unknown")
+    d = _ensure_dir(os.path.join(run["root"], "detail_html", key))
+    if key == "unknown" or key.startswith("risk_"):
+        base = str(run["ts"])          # ts 自带日期前缀，同日多轮也不会撞
+        path = os.path.join(d, base + ".html.gz")
+        n = 2
+        while os.path.exists(path):
+            path = os.path.join(d, "%s_%d.html.gz" % (base, n))
+            n += 1
+    else:
+        path = os.path.join(d, run["day"] + ".html.gz")
     part = path + ".part"
     with gzip.open(part, "wt", encoding="utf-8", newline="") as f:
         f.write(html)

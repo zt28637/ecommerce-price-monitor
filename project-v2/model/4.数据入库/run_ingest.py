@@ -202,6 +202,10 @@ def run(args):
             ingest_dim.observe_sku(conn, r, date)
 
         # 事实
+        # 先清另一张 SKU 事实表的同主键旧行：同日重跑后"有价↔无价"切换的 SKU
+        # 只能在一边存在，否则趋势视图会读到过期价格（见 ingest_fact 注释）。
+        ingest_fact.delete_other_price_rows(conn, "fact_sku_inventory", skus, date)
+        ingest_fact.delete_other_price_rows(conn, "fact_sku_price", invs, date)
         for r in items:
             ingest_fact.upsert_item(conn, r, batch_id, is_late)
             counts["item_rows"] += 1

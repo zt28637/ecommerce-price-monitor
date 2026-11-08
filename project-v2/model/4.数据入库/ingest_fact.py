@@ -24,6 +24,30 @@ def to_date(v):
     return datetime.date.fromisoformat(s[:10]) if s else None
 
 
+_PRICE_TABLES = ("fact_sku_price", "fact_sku_inventory")
+
+
+def delete_other_price_rows(conn, table, rows, date, chunk=500):
+    """同日重跑前，清理另一张 SKU 事实表里的同主键旧行。
+
+    同一个 (sku_id, crawl_date) 只能落在"有价"或"无价"其中一张表。当天先采到
+    有价、重跑后变成无价（或反之）时，另一张表的旧行没人删，就会一直留着，
+    v2_sku_change 会把过期价当成当天观测。只做 upsert 不清理，这个洞就补不上。
+
+    table 是被清的表（不是写入的表），必须来自 _PRICE_TABLES 白名单。
+    """
+    if table not in _PRICE_TABLES:
+        raise ValueError("表名不在白名单：%s" % table)
+    ids = sorted({str(r.get("sku_id")) for r in (rows or []) if r.get("sku_id")})
+    for i in range(0, len(ids), chunk):
+        part = ids[i:i + chunk]
+        sql = ("DELETE FROM %s WHERE crawl_date = %%s AND sku_id IN (%s)"
+               % (table, ", ".join(["%s"] * len(part))))
+        with conn.cursor() as cur:
+            cur.execute(sql, [str(date)] + part)
+    return len(ids)
+
+
 def _bit(v):
     if v is None:
         return None
