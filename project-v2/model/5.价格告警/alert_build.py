@@ -40,6 +40,9 @@ def load_item_history(cur, date):
           AND review_status IN ('auto_pass', 'approved')
           AND price IS NOT NULL
           AND price_source IN ('detail', 'list')
+          -- 部分 SKU 缺价的详情价不可比：它会在"有价子集最低价"之间跳动，
+          -- 直接被当成降价。列表价是触发器，本身就没有完整价概念，不设此限。
+          AND (price_source = 'list' OR price_complete = 1)
         ORDER BY product_id, crawl_date
     """, (date,))
     return list(cur.fetchall())
@@ -189,6 +192,7 @@ def build(cur, date, cfg, promo=None):
         item_alerts[pid] = a
 
     # SKU 明细：补充影响 SKU 数；没有详情价告警时用 SKU 告警替代列表价告警
+    sku_alerts = []
     sku_rows = load_sku_changes(cur, date)
     sku_by_pid = defaultdict(list)
     for r in sku_rows:
@@ -203,11 +207,9 @@ def build(cur, date, cfg, promo=None):
 
     for pid, moves in sku_by_pid.items():
         affected = len(moves)
-        if pid in item_alerts:
-            item_alerts[pid]["affected_sku_count"] = max(affected, 1)
-            if item_alerts[pid]["price_source"] != "list":
-                continue
-            # 列表价信号有明细可证：换成 SKU 告警，避免同一条报两遍
+        existing = item_alerts.get(pid)
+        if existing:
+            existing["affected_sku_count"] = max(affected, 1)
 
         # 取波动最大的一条 SKU 作代表
         rep = max(moves, key=lambda r: abs(float(r[4])))
@@ -219,6 +221,20 @@ def build(cur, date, cfg, promo=None):
                           else (th["rise_pct_daily"], th["rise_pct_instant"]))
         level = "instant" if (abs(pct) >= instant or
                               (new_low and th.get("new_low_instant", True))) else "daily"
+        # 去重只在"不会漏掉更急的信号"时成立：
+        #   · 已有列表价告警 → 用 SKU 明细替代（原设计）
+        #   · 已有商品级告警且已是 instant → 不必再报
+        #   · 已有商品级 daily、但某个 SKU 到了 instant（如商品跌 5%、某 SKU 跌 30%）
+        #     → 必须单独报，否则即时推送被日报吞掉
+        note = ""
+        if existing:
+            if existing["price_source"] == "list":
+                item_alerts.pop(pid, None)      # 列表价信号由 SKU 明细替代，不重复报
+                note = "由列表价信号升级为 SKU 明细告警"
+            elif existing["level"] == "instant" or level != "instant":
+                continue
+            else:
+                note = "商品级仅进日报，该 SKU 波动更大，单独即时告警"
         info = dims.get(pid, {})
         a = _base_alert(date, kind, "sku", pid, info.get("title"), info.get("shop_name"))
         a.update({
@@ -230,9 +246,9 @@ def build(cur, date, cfg, promo=None):
             "price_source": "detail", "is_new_low": new_low,
             "suggestion": _suggest(kind, level, new_low),
             "promo": promo,
-            "note": "由列表价信号升级为 SKU 明细告警",
+            "note": note,
         })
-        item_alerts[pid] = a
+        sku_alerts.append(a)
 
     # 新品进头部
     new_alerts = []
@@ -263,7 +279,7 @@ def build(cur, date, cfg, promo=None):
                 })
                 new_alerts.append(a)
 
-    alerts = list(item_alerts.values()) + new_alerts
+    alerts = list(item_alerts.values()) + sku_alerts + new_alerts
 
     # 大促降级
     suppressed = 0
