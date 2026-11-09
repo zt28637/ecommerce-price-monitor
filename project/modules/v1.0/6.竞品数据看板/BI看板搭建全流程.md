@@ -22,7 +22,7 @@
 | 东西 | 存在哪 | 谁能改 | 删了会怎样 |
 |------|--------|--------|-----------|
 | **业务数据**（商品/SKU/价格） | MySQL `price_monitor` | 你的 ①②③④ 采集入库流程 | 与 Metabase 无关 |
-| **4 个视图**（`v_*`） | 也在 MySQL `price_monitor` 里，但**不占空间**，只是"存好的查询" | [init_bi_views.sql](../../config/init_bi_views.sql) | 图全报错，业务数据一根毛没动 |
+| **4 个视图**（`v_*`） | 也在 MySQL `price_monitor` 里，但**不占空间**，只是"存好的查询" | [init_bi_views.sql](../../../config/init_bi_views.sql) | 图全报错，业务数据一根毛没动 |
 | **BI 配置**（管理员、数据源连接、10 段 SQL、图的摆放位置、颜色） | `F:\Programs\metabase\metabase.db\`（H2 文件，Metabase 自己的库） | Metabase 界面 | 看板全没，业务数据完好 |
 | **程序本体** | `F:\Programs\metabase\metabase.jar`（633MB） | 手动升级 | 网页打不开，上面两行都还在 |
 
@@ -189,7 +189,7 @@ MIN(price) OVER (
 
 **这两张表只有 1 行是数据现状，不是 bug。** 连续跑满两周采集，它们自己会满。
 
-在此之前，别加这些图（会做出空洞的东西）：周环比、月趋势、价格波动率/标准差带、大促前后对比（还要 [promo_dates.json](../../config/promo_dates.json) 里有真实档期）。
+在此之前，别加这些图（会做出空洞的东西）：周环比、月趋势、价格波动率/标准差带、大促前后对比（还要 [promo_dates.json](../../../config/promo_dates.json) 里有真实档期）。
 
 **两个比"加图"优先的数据待修项**：
 
@@ -228,7 +228,7 @@ WHERE h.id IS NULL;
    CREATE USER 'mb_readonly'@'localhost' IDENTIFIED BY '<强密码>';
    GRANT SELECT ON price_monitor.* TO 'mb_readonly'@'localhost';
    ```
-   然后在 Metabase 数据源里把 root 换成它。顺带解决 MySQL root 明文躺在 [config/database.json](../../config/database.json) 里的问题。
+   然后在 Metabase 数据源里把 root 换成它。顺带解决 MySQL root 明文躺在 [config/database.json](../../../config/database.json) 里的问题。
 3. **默认只监听 127.0.0.1**：启动脚本里 `set "BIND=127.0.0.1"`。改成 `0.0.0.0` 就等于把竞品价格数据给整个局域网看 —— 想给同事看更该走内网反代 + HTTPS，而不是放开 3000。
 4. **`MB_SESSION_SECRET_KEY`** 已自动生成在 `mb_secret.txt`（首次启动时），**这个文件不要提交、不要外传**。不设它的话日志会警告：任何能读到 `metabase.db` 的人可伪造会话冒充管理员。
 5. **管理员密码不写进任何仓库文档**，包括本文。

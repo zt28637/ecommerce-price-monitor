@@ -30,7 +30,7 @@ class BrowserDown(RuntimeError):
 class ReadyFailed(RuntimeError):
     """进搜索页的准备阶段失败：被风控 / 未登录 / 空结果 / 筛选没做成。
 
-    reason: 'not_login' | 'risk_page' | 'no_card' | 'filter_failed'
+    reason: 'not_login' | 'risk_page' | 'no_card' | 'prepare_failed' | 'filter_failed'
     detail: 证据串，如 'url:sec.taobao.com'、'text:请拖动滑块'
     """
 
@@ -83,7 +83,11 @@ def collect_list_ready(addr=DEFAULT_ADDR, port=PORT):
     ui = Ui(page)
     # 搜索词与价格区间都来自 targets.json，不在代码里写死
     cfg = load_rules()
-    page.get("https://s.taobao.com/search?q=%s" % quote(cfg["keyword"]))
+    try:
+        page.get("https://s.taobao.com/search?q=%s" % quote(cfg["keyword"]))
+    except Exception as e:
+        raise ReadyFailed(
+            "prepare_failed", "打开搜索页失败：%s: %s" % (type(e).__name__, e))
     # 进页先判：登录墙 / 滑块 / 访问频繁，命中就给可读 reason，不在下面裸抛元素超时
     _ensure_ok(page, "进搜索页")
     try:
@@ -96,7 +100,11 @@ def collect_list_ready(addr=DEFAULT_ADDR, port=PORT):
         raise ReadyFailed(
             "no_card", "搜索页 20 秒内没有商品卡片（无结果，或页面结构已变）")
     # 每次点击前先查询
-    ui.click(SALE_TAB_XPATH, timeout=20)
+    try:
+        ui.click(SALE_TAB_XPATH, timeout=20)
+    except Exception as e:
+        raise ReadyFailed(
+            "prepare_failed", "切换销量排序失败：%s: %s" % (type(e).__name__, e))
     # 重渲染处理
     wait_stable(lambda: _card_ids(page), timeout=12)
     # 价格区间整段由 targets.json 决定：min/max 都是 0 就整段跳过
@@ -107,7 +115,11 @@ def collect_list_ready(addr=DEFAULT_ADDR, port=PORT):
         # 光标还停在「销量」上；先挪开再重新悬停，否则第二次 hover 不一定弹出价格面板
         _park_mouse(page)
         time.sleep(0.4)
-        ui.hover(RANGE_TAB_XPATH, timeout=20)
+        try:
+            ui.hover(RANGE_TAB_XPATH, timeout=20)
+        except Exception as e:
+            raise ReadyFailed(
+                "prepare_failed", "展开价格区间失败：%s: %s" % (type(e).__name__, e))
     # 弹窗元素捕获 —— 方法 A：F12 冻结页面后抄 XPath（悬浮弹窗首选）
     #   1. 页面按 F12，切到 Sources 面板
     #   2. 鼠标移到「区间」上让价格弹窗出现，保持鼠标不动

@@ -19,6 +19,12 @@ FORBIDDEN_FILES = {
     "project/config/database.json",
     "project/config/api_config.json",
     "project/config/collect_env.json",
+    # v2.0 独立配置（与 v1 分开存放）
+    "project-v2/config/database.json",
+    "project-v2/config/alert_local.json",
+    "project-v2/config/login_local.json",
+    "project-v2/config/api_config.json",
+    "project-v2/config/collect_env.json",
     ".env",
 }
 

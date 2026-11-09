@@ -2,7 +2,7 @@
 
 比 transcribe_flows.py（v1，产出 docs/真源转录）更进一步：
   - 指令名/参数名用 sb_blocks_zh.json（extract_sb_catalog.py 从编辑器 DLL 提取）
-  - 按 FLOW_MAP 直接写回 project/modules/<环节>/<画布名>.md（覆盖旧转录）
+  - 按 FLOW_MAP 直接写回 project/modules/<版本>/<环节>/<画布名>.md（覆盖旧转录）
   - 行格式与既有画布一致：编号  指令名  参数=值  →目标流程  [机器名]
 
 前提：影刀编辑器已启动，停在"淘宝竞品价格监控自动化"应用页。
@@ -28,17 +28,23 @@ CATALOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_blocks_zh
 
 # flow_id -> (相对 project/modules 的画布路径)。新增画布在此登记。
 FLOW_MAP = {
-    "main": "主流程_main.md",
-    "process65": "0.淘宝自动化登录/0-0自动化登录.md",
+    # ---- v2.0 新应用（2026-10-30 起，编辑器当前打开的就是它）----
+    "main": "../../project-v2/主流程_main.md",
+    "process1": "../../project-v2/model/0.淘宝自动化登录/login_gate.md",
+    "process2": "../../project-v2/model/0.淘宝自动化登录/login_qr.md",
+    "process3": "../../project-v2/model/0.淘宝自动化登录/login_open.md",
+    # ---- v1.0 旧应用（已归档冻结，仅当编辑器切回旧应用时才用这些映射）----
+    "main_v1_ARCHIVED": "v1.0/主流程_main.md",
+    "process65": "v1.0/0.淘宝自动化登录/0-0自动化登录.md",
     # 文件名沿用仓库旧名"凭据"（README/USER-CONFIG 均引用此名）；画布标题以编辑器流程名"凭证"为准
-    "process66": "0.淘宝自动化登录/0-1登录凭据设置.md",
-    "process67": "0.淘宝自动化登录/0-2模拟登录.md",
-    "process51": "1.竞品商品数据采集/1-1商品数据采集.md",
-    "process64": "1.竞品商品数据采集/1-2下一页按钮翻页.md",
-    "process62": "2.竞品SKU数据采集/2-0B-SKU数据采集.md",
-    "process59": "2.竞品SKU数据采集/2-1B1-SKU一维数据采集.md",
-    "process60": "2.竞品SKU数据采集/2-2B2-SKU二维数据采集.md",
-    "process68": "工具箱/通用滚动策略.md",
+    "process66": "v1.0/0.淘宝自动化登录/0-1登录凭据设置.md",
+    "process67": "v1.0/0.淘宝自动化登录/0-2模拟登录.md",
+    "process51": "v1.0/1.竞品商品数据采集/1-1商品数据采集.md",
+    "process64": "v1.0/1.竞品商品数据采集/1-2下一页按钮翻页.md",
+    "process62": "v1.0/2.竞品SKU数据采集/2-0B-SKU数据采集.md",
+    "process59": "v1.0/2.竞品SKU数据采集/2-1B1-SKU一维数据采集.md",
+    "process60": "v1.0/2.竞品SKU数据采集/2-2B2-SKU二维数据采集.md",
+    "process68": "v1.0/工具箱/通用滚动策略.md",
 }
 # process61 测试主流程：开发期试验场，刻意不落盘（沿用旧索引约定）
 # 工具箱/通用滚动策略.md = process68（影刀组"工具箱"，1-1/2-0 等共用）
@@ -49,7 +55,10 @@ NOTES = {
 }
 # 文末附录（flow_id → markdown 段落），重转录自动保留
 APPENDIX = {
-    "main": """
+    # ⚠ 原 "main" 附录（011/019/023/027 审核疑点）描述的是 **v1.0 旧应用** 的 main，
+    # 已随 v1 归档保留在 v1.0/主流程_main.md；v2.0 的 main 只有 2 块，挂这份附录会误导。
+    # 如需恢复旧附录，请挂到独立 key（如 main_v1_ARCHIVED），勿再挂 "main"。
+    "_v1_UNUSED": """
 ## 审核疑点（2026-09-30 · 对照模块 .py 签名交叉核对，仅记录，未改画布）
 - **011 路径拼写**：导出目录 `product_alllraw`（3个l），磁盘实际为 `runtime/product_allraw` → 会静默新建错误目录，下游按实际名找不到文件
 - **019 多余且有害的 report 调用**：`output_path=input 竞品清洗Excel`（report.py 会覆盖清洗产物），023 再调用时读到的已是被日报覆盖的文件而非 13 列清洗表；015→019→023 三连里 019 疑似返工遗留，应删（023 单独保留即可，或改 output_path）
@@ -59,6 +68,11 @@ APPENDIX = {
 > 复核 2026-10-08（重转录后逐条对照新画布）：**四条疑点在原位置全部仍成立**（011/012/016/019/023/027 块号未变）。
 """,
 }
+
+# 敏感字段转录后脱敏（render_flow 内、落盘/预览前执行；仅登记流程生效）。
+# mask() 只认 token=，覆盖不到"文本内容=手机号 / 剪切板=密码"这类字面量。
+# 项目一登录画布若出现明文凭据，在此登记：flow_id -> [(正则, 替换)]。
+POST_MASK = {}
 
 MODE_CN = {
     "variable": "变量",
@@ -194,6 +208,8 @@ def render_flow(fid: str, f: dict, cat: dict, now: str) -> str:
     ]
     lines = [render_block(b, cat, NOTES.get(fid, {})) for b in blocks]
     text = "\n".join(header + lines) + "\n"
+    for pat, rep in POST_MASK.get(fid, []):
+        text = pat.sub(rep, text)
     if fid in APPENDIX:
         text += APPENDIX[fid].rstrip("\n") + "\n"
     return text

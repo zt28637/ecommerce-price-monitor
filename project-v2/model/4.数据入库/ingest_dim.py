@@ -199,3 +199,8 @@ if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8")
     print("ingest_dim 由 run_ingest 调用；单元测试请用 --dry-run")
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

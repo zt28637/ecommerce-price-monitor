@@ -455,11 +455,17 @@ def mark_login(method="manual"):
 
 
 def _attempt_quick_enter(page, st, budget):
-    """确认面板 → 点快速进入 → 等 URL 离开 login。"""
+    """确认面板 → 点快速进入 → 等离开 login 域 → classify 复核登录态。"""
     clicked = _quick_enter(page)
     if clicked == "ok":
         url = _wait_leave_login(page, QUICK_ENTER_WAIT)
-        if not _on_login_page(url) and classify_login._nick_ok(page):
+        try:
+            page_state = classify_login.classify_login(page, page.url or url)
+        except Exception:
+            page_state = "not_login"
+        # 只认 auto（已离开 login 域且认证 cookie 齐全）：残留 tracknick
+        # 或被重定向到风控页都不算登录成功，否则下游会在未登录浏览器上继续跑。
+        if page_state == "auto":
             return _result("logged_in", "quick_enter", "ok", budget=budget,
                            detail="快速进入成功")
     st["last_seen_at"] = _iso(_now())

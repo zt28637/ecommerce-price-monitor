@@ -121,3 +121,18 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     print(json.dumps(build_payload("dingtalk", "t", "hello"), ensure_ascii=False))
     print(json.dumps(build_payload("feishu", "t", "hello"), ensure_ascii=False))
+
+
+def alert(text, title="流程告警"):
+    """运维告警：按 alert.json 默认通道发送一条文本（画布 Catch 用）。
+
+    与业务告警共用同一套通道配置；未配置 webhook 时返回 error/skipped，不抛错。
+    """
+    import alert_config
+    cfg = alert_config.load()
+    return deliver_all(cfg, title, text, [], enabled=True)
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

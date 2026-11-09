@@ -22,8 +22,8 @@ from pathlib import Path
 
 from DrissionPage import ChromiumPage
 
-ROOT = Path(__file__).resolve().parents[3]
-OUT_ROOT = ROOT / "project-v2" / "runtime" / "_sample" / "login_scan"
+ROOT = Path(__file__).resolve().parents[3]          # project-v2/
+OUT_ROOT = ROOT / "runtime" / "_sample" / "login_scan"
 LOGIN_URL = "https://login.taobao.com/member/login.jhtml"
 REDIRECT = "https://www.taobao.com/"
 LOGIN_HOSTS = ("login.taobao.com", "login.tmall.com")

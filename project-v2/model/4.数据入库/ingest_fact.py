@@ -1,4 +1,4 @@
-"""事实入库：fact_item_price / fact_sku_price / fact_sku_inventory。
+"""事实入库：fact_item_price / fact_sku_price。
 
 幂等：主键 (product_id|sku_id, crawl_date) + ON DUPLICATE KEY UPDATE。
 同一天重跑，行数不变，只更新值与 batch_id；不追加重复快照。
@@ -24,7 +24,7 @@ def to_date(v):
     return datetime.date.fromisoformat(s[:10]) if s else None
 
 
-_PRICE_TABLES = ("fact_sku_price", "fact_sku_inventory")
+_PRICE_TABLES = ("fact_sku_price",)
 
 
 def delete_other_price_rows(conn, table, rows, date, chunk=500):
@@ -95,19 +95,6 @@ ON DUPLICATE KEY UPDATE
     batch_id       = VALUES(batch_id)
 """
 
-INV_SQL = """
-INSERT INTO fact_sku_inventory
-    (sku_id, crawl_date, product_id, quantity, in_stock, reason, batch_id)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
-ON DUPLICATE KEY UPDATE
-    product_id = VALUES(product_id),
-    quantity   = VALUES(quantity),
-    in_stock   = VALUES(in_stock),
-    reason     = VALUES(reason),
-    batch_id   = VALUES(batch_id)
-"""
-
-
 def upsert_item(conn, row, batch_id, is_late):
     # 趋势价优先详情；没有深采的商品保留列表价，但明确标 price_source='list'，
     # 趋势视图只取 detail（plan §2.4c 铁律 2）。
@@ -144,15 +131,6 @@ def upsert_sku(conn, row, batch_id, is_late):
         ))
 
 
-def upsert_inventory(conn, row, batch_id):
-    with conn.cursor() as cur:
-        cur.execute(INV_SQL, (
-            row["sku_id"], to_date(row["crawl_date"]), row["product_id"],
-            row.get("quantity"), _bit(row.get("in_stock")),
-            str(row.get("reason") or "")[:32], batch_id,
-        ))
-
-
 def upsert_batch(conn, batch):
     with conn.cursor() as cur:
         cur.execute("""
@@ -184,3 +162,8 @@ if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8")
     print("ingest_fact 由 run_ingest 调用；单元测试请用 --dry-run")
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

@@ -101,3 +101,8 @@ def render_push(alerts, summary, max_items=10):
     if len(instant) > max_items:
         lines.append("- ……另有 %d 条，见日报" % (len(instant) - max_items))
     return "\n".join(lines)
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

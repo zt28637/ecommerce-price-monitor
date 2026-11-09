@@ -37,9 +37,8 @@ import ingest_dim
 import ingest_fact
 import schema
 
-# 退两层才是 project-v2/（run_clean 写的是 <project-v2>/runtime/clean）
-DEFAULT_CLEAN_ROOT = os.path.normpath(os.path.join(
-    _MODULE_DIR, "..", "..", "runtime", "clean"))
+# 用 db.PROJECT_DIR：影刀应用里 _MODULE_DIR 是 xbot_robot，相对路径会指错
+DEFAULT_CLEAN_ROOT = os.path.join(db.PROJECT_DIR, "runtime", "clean")
 
 OK_STATUS = ("auto_pass", "approved")
 BAD_STATUS = ("rejected",)
@@ -164,6 +163,8 @@ def run(args):
             counts["skipped_no_key"] += 1
         else:
             invs.append(r)
+    # 无价 SKU 不再落库存事实表；数量仍记进批次台账，保留可追溯性
+    counts["inventory_rows"] = len(invs)
 
     is_late = 1 if ingest_fact.to_date(date) < run_date else 0
     ts = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -202,9 +203,8 @@ def run(args):
             ingest_dim.observe_sku(conn, r, date)
 
         # 事实
-        # 先清另一张 SKU 事实表的同主键旧行：同日重跑后"有价↔无价"切换的 SKU
-        # 只能在一边存在，否则趋势视图会读到过期价格（见 ingest_fact 注释）。
-        ingest_fact.delete_other_price_rows(conn, "fact_sku_inventory", skus, date)
+        # 同日重跑后"有价→无价"的 SKU 要把旧价格行清掉，否则趋势视图会读到过期价格
+        # （见 ingest_fact 注释）。库存事实表已取消，只保留这一侧清理。
         ingest_fact.delete_other_price_rows(conn, "fact_sku_price", invs, date)
         for r in items:
             ingest_fact.upsert_item(conn, r, batch_id, is_late)
@@ -212,9 +212,6 @@ def run(args):
         for r in skus:
             ingest_fact.upsert_sku(conn, r, batch_id, is_late)
             counts["sku_rows"] += 1
-        for r in invs:
-            ingest_fact.upsert_inventory(conn, r, batch_id)
-            counts["inventory_rows"] += 1
 
         batch = {
             "batch_id": batch_id, "crawl_date": date,
@@ -234,7 +231,7 @@ def run(args):
             date, "（补跑，is_late=1）" if is_late else "", batch_id,
             os.path.basename(clean_dir.rstrip("\\/"))))
         _log("[入库] 文件：%s / %s / %s" % (item_file or "-", sku_file or "-", inv_file or "-"))
-        _log("[入库] 事实：item %(item_rows)d | sku %(sku_rows)d | inventory %(inventory_rows)d"
+        _log("[入库] 事实：item %(item_rows)d | sku %(sku_rows)d | 无价 %(inventory_rows)d（不落库）"
              % counts)
         _log("[入库] 跳过：pending %(skipped_pending)d | rejected %(skipped_rejected)d | "
              "缺主键 %(skipped_no_key)d" % counts)

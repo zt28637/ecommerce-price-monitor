@@ -367,7 +367,7 @@ def apply_grades(items, skus, inventory, cfg, extra_anomalies=None):
         anomalies.append({
             "crawl_date": rows[0]["crawl_date"], "product_id": pid, "sku_id": "",
             "level": "info", "rule": "price_missing",
-            "message": "无价库存 %d 个 SKU（%s），保留库存事实、不进价格趋势"
+            "message": "无价 SKU %d 个（%s），报表留证、不落库、不进价格趋势"
                        % (len(rows), rows[0].get("reason") or "price_null"),
             "disposition": "kept", "source_file": rows[0].get("source_file", ""),
             "crawl_ts": rows[0].get("crawl_ts", ""),
@@ -387,7 +387,8 @@ def apply_grades(items, skus, inventory, cfg, extra_anomalies=None):
         "sku_dropped": sum(1 for kind, _ in dropped if kind == "sku"),
         "inventory_rows": len(kept_inv),
         "rule_hits": rule_hits,
-        "pass_rate": (green / float(len(kept_items))) if kept_items else 0.0,
+        # 通过率 = 绿 / 商品总数（含红行）；分母不能用 kept_items，否则红行被排除会虚高
+        "pass_rate": (green / float(len(items))) if items else 0.0,
     }
     return {"items": kept_items, "skus": kept_skus, "inventory": kept_inv,
             "dropped": dropped, "anomalies": anomalies, "stats": stats}
@@ -416,3 +417,8 @@ if __name__ == "__main__":
     print("price '--' ->", to_float("--"), "| '¥1,299.00' ->", to_float("¥1,299.00"))
     print("grade", grade(["sales_missing"]), grade(["missing_key"]),
           grade(["sales_missing", "missing_key"]))
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

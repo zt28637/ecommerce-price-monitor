@@ -13,8 +13,24 @@ import pymysql
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 # _MODULE_DIR 已到 project-v2/model/4.数据入库，要退两层才是 project-v2/
-DEFAULT_CONFIG = os.path.normpath(os.path.join(
-    _MODULE_DIR, "..", "..", "config", "database.json"))
+# 影刀把 CodeFlow 复制到 xbot_robot 下执行，相对路径会指到应用目录；
+# 因此与 1.列表页采集 同款：环境变量 > 相对仓库 > 本机绝对路径。
+_PROJECT_CANDIDATES = [
+    os.environ.get("TB_RPA_PROJECT_V2"),
+    os.path.normpath(os.path.join(_MODULE_DIR, "..", "..")),
+    r"F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\project-v2",
+]
+
+
+def _first_project(candidates):
+    for p in candidates:
+        if p and os.path.isdir(os.path.join(p, "model")):
+            return p
+    return os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
+
+
+PROJECT_DIR = _first_project(_PROJECT_CANDIDATES)
+DEFAULT_CONFIG = os.path.join(PROJECT_DIR, "config", "database.json")
 
 
 def load_config(path=None):
@@ -66,3 +82,8 @@ def describe(config_path=None, database=None):
     cfg = load_config(config_path)
     return "%s@%s:%s/%s" % (cfg["user"], cfg["host"], cfg["port"],
                             database or cfg["database"])
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

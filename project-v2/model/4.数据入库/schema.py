@@ -7,7 +7,8 @@
   dim_sku           维度 · sku_id            规格组合名
   fact_item_price   事实 · (product_id, 采集日期)  商品级（详情价 + 列表价分列）
   fact_sku_price    事实 · (sku_id, 采集日期)      SKU 精确价 + 库存 + price_complete
-  fact_sku_inventory 事实 · (sku_id, 采集日期)     无价库存（v2 扩展；不参与价格趋势）
+  fact_item_price / fact_sku_price             价格事实（趋势只认这两张）
+  （无价库存不落库：清洗产物 inventory.jsonl 留证，数量只记进 ingest_batch 台账）
   ingest_batch      台账 · batch_id          每批一行，counts 与来源目录
 
 口径（plan §5.2 / 5.3）：
@@ -101,21 +102,6 @@ CREATE TABLE IF NOT EXISTS fact_sku_price (
     KEY idx_date (crawl_date),
     KEY idx_batch (batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SKU 价格事实'
-""",
-    "fact_sku_inventory": """
-CREATE TABLE IF NOT EXISTS fact_sku_inventory (
-    sku_id      VARCHAR(48) NOT NULL,
-    crawl_date  DATE        NOT NULL,
-    product_id  VARCHAR(32) NOT NULL,
-    quantity    INT         NULL,
-    in_stock    TINYINT(1)  NULL,
-    reason      VARCHAR(32) NOT NULL DEFAULT '' COMMENT 'partial_sku_price/masked/price_null',
-    batch_id    VARCHAR(48) NOT NULL DEFAULT '',
-    ingested_at TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (sku_id, crawl_date),
-    KEY idx_product_date (product_id, crawl_date),
-    KEY idx_date (crawl_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='无价 SKU 库存事实（不进价格趋势）'
 """,
     "ingest_batch": """
 CREATE TABLE IF NOT EXISTS ingest_batch (

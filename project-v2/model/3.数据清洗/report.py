@@ -82,3 +82,8 @@ def save(date, items, skus, inventory, anomalies, out_dir, stats, extra=None):
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     print("report.py: 由 run_clean 调用；单独运行请见 run_clean.py --help")
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

@@ -229,6 +229,10 @@ def main(cleaned_path: str, config_path: str) -> dict:
 
 
 if __name__ == "__main__":
-    EXCEL = r"../../runtime/product_clean/demo.xlsx"
-    CONFIG = r"../config/database.json"
+    # 仓库根 = project/modules/v1.0/4.竞品数据汇总/ 往上 4 层
+    _REPO_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.dirname(_MODULE_DIR))))
+    EXCEL = os.path.join(_REPO_DIR, "project", "runtime",
+                         "product_clean", "demo.xlsx")
+    CONFIG = os.path.join(_REPO_DIR, "project", "config", "database.json")
     print(json.dumps(ingest(EXCEL, CONFIG), ensure_ascii=False, indent=2))

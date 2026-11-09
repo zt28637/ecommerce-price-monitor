@@ -246,3 +246,8 @@ if __name__ == "__main__":
         "flags": r["flags"],
         "skus": r["skus"],
     }, ensure_ascii=False, indent=1))
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

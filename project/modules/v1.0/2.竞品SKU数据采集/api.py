@@ -34,7 +34,7 @@ except ImportError:
 _CONFIG_CANDIDATES = [
     os.path.normpath(os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        os.pardir, os.pardir, "config", "api_config.json")),
+        os.pardir, os.pardir, os.pardir, "config", "api_config.json")),
     r"F:/Programs/RPA自动化/1-淘宝竞品价格监控自动化/project/config/api_config.json",
 ]
 

@@ -18,9 +18,25 @@ import time
 import urllib.parse
 import urllib.request
 
-CONFIG = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "config", "alert_local.json")
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 影刀把 CodeFlow 复制到 xbot_robot 下执行，相对路径会指到应用目录；
+# 因此与列表层同款：环境变量 > 相对仓库 > 本机绝对路径。
+_PROJECT_CANDIDATES = [
+    os.environ.get("TB_RPA_PROJECT_V2"),
+    os.path.normpath(os.path.join(_MODULE_DIR, "..", "..")),
+    r"F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\project-v2",
+]
+
+
+def _first_project(candidates):
+    for p in candidates:
+        if p and os.path.isdir(os.path.join(p, "model")):
+            return p
+    return os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
+
+
+CONFIG = os.path.join(_first_project(_PROJECT_CANDIDATES),
+                      "config", "alert_local.json")
 
 
 def _resolve(value):

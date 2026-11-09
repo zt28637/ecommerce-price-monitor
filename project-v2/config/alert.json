@@ -1,0 +1,23 @@
+{
+  "thresholds": {
+    "drop_pct_daily": 5.0,
+    "drop_pct_instant": 10.0,
+    "rise_pct_daily": 5.0,
+    "rise_pct_instant": 10.0,
+    "new_low_instant": true
+  },
+  "new_product": {
+    "enabled": true,
+    "top_n": 10,
+    "days": 7,
+    "min_history_days": 3
+  },
+  "promo": {
+    "downgrade_instant": true
+  },
+  "channels": {
+    "default": "feishu"
+  },
+  "send_instant": true,
+  "send_daily": true
+}

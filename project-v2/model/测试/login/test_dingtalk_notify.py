@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-TOOLBOX_DIR = Path(__file__).resolve().parents[2] / "工具箱"
+TOOLBOX_DIR = Path(__file__).resolve().parents[2] / "tool"
 sys.path.insert(0, str(TOOLBOX_DIR))
 
 import dingtalk_notify as dn  # noqa: E402

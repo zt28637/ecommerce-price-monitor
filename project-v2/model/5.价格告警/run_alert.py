@@ -11,7 +11,7 @@
   python run_alert.py --date 2026-11-01 --send
   python run_alert.py --date 2026-11-01 --send --send-daily --channel feishu
 
-目录：runtime/v2/alerts/<YYYYMMDD>/
+目录：runtime/alerts/<YYYYMMDD>/
   alerts.jsonl        告警明细（机器读）
   告警_<date>.md       人在看的日报（即时 + 日报 + 新品 + 口径）
   summary.json        计数与诊断
@@ -38,8 +38,8 @@ import alert_render
 import db
 import notify
 
-# _MODULE_DIR 是 project-v2/model/5.价格告警，退两层才到 project-v2/
-PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
+# 用 alert_config 的仓库根：影刀应用里相对路径会指到 xbot_robot
+PROJECT_DIR = alert_config.PROJECT_DIR
 DEFAULT_OUT_ROOT = os.path.join(PROJECT_DIR, "runtime", "alerts")
 
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     ap.add_argument("--database", default="", help="覆盖库名（测试库用）")
     ap.add_argument("--config", default="", help="database.json 路径")
     ap.add_argument("--alert-config", default="", help="alert.json 路径")
-    ap.add_argument("--out", default="", help="输出目录；默认 runtime/v2/alerts/<YYYYMMDD>")
+    ap.add_argument("--out", default="", help="输出目录；默认 runtime/alerts/<YYYYMMDD>")
     ap.add_argument("--send", action="store_true", help="真正调用推送通道")
     ap.add_argument("--send-daily", action="store_true", help="连日报一起推")
     ap.add_argument("--channel", default="", help="指定通道名（dingtalk/feishu/custom/file）")

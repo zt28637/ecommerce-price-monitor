@@ -176,15 +176,23 @@ def _test_orchestration():
         res = le._main()
         failed += case("O03 auto → logged_in", (res["state"], res["method"]), ("logged_in", "auto"))
 
-        # O04 确认面板 + 快速进入成功
-        le.classify_login.classify_login = lambda p, u: "confirm"
+        # O04 确认面板 + 快速进入成功（点完必须复核为 auto，不能只看 tracknick）
+        seq = iter(["confirm", "auto"])
+        le.classify_login.classify_login = lambda p, u: next(seq)
         le._quick_enter = lambda p: "ok"
         le._wait_leave_login = lambda p, s: "https://www.taobao.com/"
-        le.classify_login._nick_ok = lambda p: True
         res = le._main()
         failed += case("O04 快速进入成功", (res["state"], res["method"]), ("logged_in", "quick_enter"))
 
+        # O04b 快速进入后只有残留 tracknick（复核不是 auto）→ 不能判登录成功
+        seq = iter(["confirm", "not_login"])
+        le.classify_login.classify_login = lambda p, u: next(seq)
+        res = le._main()
+        failed += case("O04b 快速进入后复核失败转人工",
+                       (res["result"], res["need_manual"]), ("manual_required", True))
+
         # O05 确认面板 + 快速进入失败 → 人工
+        le.classify_login.classify_login = lambda p, u: "confirm"
         le._quick_enter = lambda p: "not_found"
         res = le._main()
         failed += case("O05 快速进入失败转人工", (res["result"], res["need_manual"]),

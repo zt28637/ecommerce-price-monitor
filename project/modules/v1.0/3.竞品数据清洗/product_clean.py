@@ -474,6 +474,10 @@ def main(filepath: str, keyword: str = "", timestamp: str = "",
 # 本地调试
 # ============================================================
 if __name__ == "__main__":
-    demo_input = r"../../runtime/product_allraw/demo.xlsx"
+    # 仓库根 = project/modules/v1.0/3.竞品数据清洗/ 往上 4 层
+    _REPO_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.dirname(_MODULE_DIR))))
+    demo_input = os.path.join(_REPO_DIR, "project", "runtime",
+                              "product_allraw", "demo.xlsx")
     result = clean_excel(demo_input, keyword="小天才Z6pro")
     print(json.dumps(result, ensure_ascii=False, indent=2))

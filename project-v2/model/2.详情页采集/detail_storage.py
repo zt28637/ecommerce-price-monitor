@@ -172,3 +172,8 @@ def save_run_log(run, meta):
     _atomic_write_text(run["run_log_path"], text)
     _log("[详情落盘] 台账写入 %s" % os.path.basename(run["run_log_path"]))
     return run["run_log_path"]
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

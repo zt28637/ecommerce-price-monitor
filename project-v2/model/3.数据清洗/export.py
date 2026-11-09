@@ -228,3 +228,8 @@ def write_xlsx(path, sheets):
     wb.save(part)
     os.replace(part, path)
     return path
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

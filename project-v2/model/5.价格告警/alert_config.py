@@ -15,7 +15,23 @@ import re
 
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 # _MODULE_DIR 是 project-v2/model/5.价格告警，退两层才到 project-v2/
-PROJECT_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
+# 影刀把 CodeFlow 复制到 xbot_robot 下执行，相对路径会指到应用目录；
+# 因此与 1.列表页采集 同款：环境变量 > 相对仓库 > 本机绝对路径。
+_PROJECT_CANDIDATES = [
+    os.environ.get("TB_RPA_PROJECT_V2"),
+    os.path.normpath(os.path.join(_MODULE_DIR, "..", "..")),
+    r"F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\project-v2",
+]
+
+
+def _first_project(candidates):
+    for p in candidates:
+        if p and os.path.isdir(os.path.join(p, "model")):
+            return p
+    return os.path.normpath(os.path.join(_MODULE_DIR, "..", ".."))
+
+
+PROJECT_DIR = _first_project(_PROJECT_CANDIDATES)
 DEFAULT_CONFIG = os.path.join(PROJECT_DIR, "config", "alert.json")
 LOCAL_CONFIG = os.path.join(PROJECT_DIR, "config", "alert_local.json")
 PROMO_CONFIG = os.path.join(PROJECT_DIR, "config", "promo_dates.json")
@@ -39,7 +55,7 @@ DEFAULTS = {
     },
     "channels": {
         "default": "file",
-        "file": {"type": "file", "dir": "runtime/v2/alerts"},
+        "file": {"type": "file", "dir": "runtime/alerts"},
         "dingtalk": {"type": "dingtalk", "url": "${DINGTALK_WEBHOOK}",
                      "secret": "${DINGTALK_SECRET}",
                      "keyword": "${DINGTALK_KEYWORD}"},
@@ -110,3 +126,8 @@ def promo_of(date, periods):
         if s <= date <= e:
             return name
     return None
+
+
+def main(args=None):
+    """影刀 CodeFlow 入口占位：本模块是工具库。"""
+    return {"ok": True}

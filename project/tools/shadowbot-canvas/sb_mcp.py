@@ -10,6 +10,7 @@ Copilot 就是用它读写流程画布。这里复用同一接口，把"真源"�
 """
 
 import json
+import os
 import re
 import urllib.request
 
@@ -42,27 +43,52 @@ def _mcp_alive(port: int) -> bool:
         return False
 
 
+_PORT_CACHE = os.path.join(os.environ.get("TEMP", "."), "sb_mcp_port.txt")
+
+
 def discover_port() -> int:
-    """从影刀日志里收集候选端口并逐一握手，找到编辑器当前的 MCP 端口。"""
+    """从影刀日志里收集候选端口并逐一握手，找到编辑器当前的 MCP 端口。
+
+    编辑器当天日志可能只记启动信息（不含端口），且端口会跨天沿用；
+    因此扫描最近 20 份日志，并用上次成功的端口缓存兜底。
+    """
     import glob
     import os
 
     logs = sorted(glob.glob(os.path.join(_LOG_DIR, "*.log")), key=os.path.getmtime, reverse=True)
     candidates: list[int] = []
-    for lg in logs[:3]:
-        with open(lg, "rb") as f:
-            data = f.read()
+
+    def add(port: int) -> None:
+        if port not in candidates:
+            candidates.append(port)
+
+    # 上次成功的端口优先（编辑器重启后端口通常会变，握手失败会自动跳过）
+    try:
+        with open(_PORT_CACHE, encoding="utf-8") as f:
+            add(int(f.read().strip()))
+    except (OSError, ValueError):
+        pass
+
+    for lg in logs[:20]:
+        try:
+            with open(lg, "rb") as f:
+                data = f.read()
+        except OSError:
+            continue
         for p in reversed(re.findall(rb"127\.0\.0\.1:(\d{4,5})", data)):
-            port = int(p)
-            if port not in candidates:
-                candidates.append(port)
+            add(int(p))
     for port in candidates:
         if _mcp_alive(port):
+            try:
+                with open(_PORT_CACHE, "w", encoding="utf-8") as f:
+                    f.write(str(port))
+            except OSError:
+                pass
             return port
     raise RuntimeError("未发现影刀编辑器 MCP 端口——请确认编辑器已启动并停在应用页")
 
 
-def call(tool: str, arguments: dict | None = None, port: int | None = None):
+def call(tool: str, arguments: dict | None = None, port: int | None = None, timeout: int = 60):
     """调用一个 studio-mcp 工具，返回解析后的 JSON 内容。"""
     port = port or discover_port()
     payload = {
@@ -80,7 +106,7 @@ def call(tool: str, arguments: dict | None = None, port: int | None = None):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read().decode("utf-8", errors="replace")
     # 兼容 SSE 帧：data: {...}
     for line in body.splitlines():

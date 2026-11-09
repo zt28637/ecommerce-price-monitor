@@ -20,6 +20,12 @@ import sys
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 if _MODULE_DIR and _MODULE_DIR not in sys.path:
     sys.path.insert(0, _MODULE_DIR)
+# 风控页判据统一由 tool/risk_page 提供（与列表层共用，避免两套可见性写法）
+_TOOL_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", "tool"))
+if os.path.isdir(_TOOL_DIR) and _TOOL_DIR not in sys.path:
+    sys.path.insert(0, _TOOL_DIR)
+
+import risk_page
 
 try:  # 允许脱离影刀离线运行
     import xbot
@@ -511,40 +517,17 @@ def _retryable_reason(reason):
                                          "open_error", "timeout"))
 
 
-RISK_URL_MARKERS = ("login.taobao.com", "sec.taobao.com", "_____tmd_____",
-                    "punish", "x5sec", "captcha")
-RISK_TEXT_MARKERS = ("请拖动滑块", "滑块验证", "安全验证", "人机验证", "访问受限",
-                     "哎哟喂", "系统繁忙", "请稍后再试", "访问过于频繁", "Too Many Requests")
-RISK_DOM_SELECTOR = ("#nc_1_n1z, .nc-container, #baxia-dialog, "
-                     "[id*=captcha], iframe[src*=captcha]")
-
-
 def _risk_reason(page):
-    """风控页识别：URL / 可见文本 / 可见验证元素。命中返回原因，否则 None。"""
-    url = (getattr(page, "url", "") or "").lower()
-    for m in RISK_URL_MARKERS:
-        if m in url:
-            return "url:%s" % m
-    try:
-        text = page.run_js(
-            "return document.body ? document.body.innerText.slice(0,5000) : ''") or ""
-    except Exception:
-        text = ""
-    for m in RISK_TEXT_MARKERS:
-        if m in text:
-            return "text:%s" % m
-    try:
-        hit = page.run_js(
-            "var e=document.querySelector(%s);"
-            "if(!e) return false;"
-            "var s=getComputedStyle(e);"
-            "return e.offsetParent!==null && s.display!=='none' && s.visibility!=='hidden';"
-            % json.dumps(RISK_DOM_SELECTOR))
-    except Exception:
-        hit = False
-    if hit:
-        return "dom:%s" % RISK_DOM_SELECTOR
-    return None
+    """风控页识别：统一走 tool/risk_page（详情与列表共用同一套判据）。
+
+    登录墙由 collect_one 的 _check_login 先处理；这里只认风险页，
+    返回证据串（如 'text:请拖动滑块'）或 None。
+    """
+    hit = risk_page.block_reason(page)
+    if not hit:
+        return None
+    reason, evidence = hit
+    return evidence if reason == "risk_page" else None
 
 
 def _api_state(root):
@@ -635,12 +618,11 @@ def collect_one(page, url, product_id=None, wait_timeout=DEFAULT_WAIT_TIMEOUT,
     return html, result
 
 
-def main(args=None, **kwargs):
+def main(args=None):
     """编排入口。返回本轮统计 dict。"""
     cfg = {}
     if isinstance(args, dict):
         cfg.update(args)
-    cfg.update(kwargs)
 
     urls = _as_list(cfg.get("urls"))
     if not urls:

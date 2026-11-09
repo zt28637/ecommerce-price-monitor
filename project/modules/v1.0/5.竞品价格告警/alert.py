@@ -420,9 +420,10 @@ def main(config_path, webhook_url, keyword="", secret="", drop_pct=5.0):
 # 本地调试
 # ============================================================
 if __name__ == "__main__":
-    # 计算项目根目录（本文件在 project/modules/4.竞品数据汇总/ 下，往上 3 层）
+    # 计算仓库根目录（本文件在 project/modules/v1.0/5.竞品价格告警/ 下，往上 4 层）
     MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-    PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(MODULE_DIR)))
+    PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.dirname(MODULE_DIR))))
 
     CONFIG = os.path.join(PROJECT_DIR, "project", "config", "database.json")
     # 本地调试用：export ALERT_WEBHOOK=... ALERT_SECRET=...

@@ -53,8 +53,11 @@ def _load_module(name, path):
     return mod
 
 
-def generate_list_raw(html_path, ts, root, config_path=None):
+def generate_list_raw(html_path, ts, root, targets_config=None):
     """parse_list + filter_product -> list_raw/<关键词>/<ts>.jsonl，返回文件路径。
+
+    targets_config 是采集目标配置（targets.json），**不是** --config 的清洗阈值；
+    两者混用会让关键词/价格过滤静默失效（见 2026-11-09 修复）。
 
     产出与 collect_list 保持一致：只写通过过滤的行（落盘契约见
     docs/列表页采集-待办清单 L-05，清洗层对缺 passed 的行视为通过）。
@@ -63,7 +66,7 @@ def generate_list_raw(html_path, ts, root, config_path=None):
     filter_product = _load_module(
         "filter_product", os.path.join(LIST_MODULE_DIR, "filter_product.py"))
 
-    cfg = config_path or DEFAULT_CONFIG
+    cfg = targets_config or DEFAULT_CONFIG
     ruleset = filter_product.load_rules(cfg)
     with open(html_path, "r", encoding="utf-8", errors="replace") as f:
         rows = parse_list.parse_list(f.read())
@@ -82,6 +85,7 @@ def generate_list_raw(html_path, ts, root, config_path=None):
 # ------------------------------------------------------------
 def run(args):
     cfg = rules.load_config(args.get("config"))
+    targets_config = args.get("targets_config") or DEFAULT_CONFIG
     root = args.get("root") or DEFAULT_ROOT
     date = args.get("date") or rules.today_str()
     # 目录按用户口径用 YYYYMMDD；行内 crawl_date 仍是 YYYY-MM-DD
@@ -89,7 +93,8 @@ def run(args):
     export.ensure_dir(out_dir)
 
     # 0) 可选的 list_raw 现生成（多个 HTML -> 多轮，用来验证同日去重）
-    list_paths = list(args.get("list_raw") or [])
+    # 画布整链路调用时不必传路径：缺省读本轮 runtime 下的 list_raw / detail_raw。
+    list_paths = list(args.get("list_raw") or [os.path.join(root, "list_raw")])
     htmls = args.get("list_html") or []
     if isinstance(htmls, str):
         htmls = [htmls] if htmls else []
@@ -99,7 +104,7 @@ def run(args):
     for i, html_path in enumerate(htmls):
         ts = tss[i] if i < len(tss) and tss[i] else \
             datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        list_paths.append(generate_list_raw(html_path, ts, root, args.get("config")))
+        list_paths.append(generate_list_raw(html_path, ts, root, targets_config))
 
     # 1) 列表
     lst = clean_list.clean_files([p for p in list_paths if p], date=date)
@@ -107,7 +112,8 @@ def run(args):
          % lst["stats"])
 
     # 2) 详情
-    det = clean_detail.clean_files([p for p in (args.get("detail_raw") or []) if p], date=date)
+    detail_paths = list(args.get("detail_raw") or [os.path.join(root, "detail_raw")])
+    det = clean_detail.clean_files([p for p in detail_paths if p], date=date)
     _log("[清洗] 详情：原始 %(raw_rows)d -> 商品 %(products)d | 有价 SKU %(skus_priced)d"
          " | 无价库存 %(inventory_rows)d" % det["stats"])
 
@@ -180,5 +186,7 @@ if __name__ == "__main__":
                     help="现生成 JSONL 的轮次号 YYYYMMDD_HHMM，与 --list-html 顺序对应")
     ap.add_argument("--root", default=DEFAULT_ROOT, help="runtime 根目录")
     ap.add_argument("--out", default="", help="输出目录；默认 <root>/clean/<YYYYMMDD>")
-    ap.add_argument("--config", default="", help="清洗参数 JSON（可选）")
+    ap.add_argument("--config", default="", help="清洗阈值 JSON（price_min/price_max，可选）")
+    ap.add_argument("--targets-config", default="",
+                    help="采集目标 targets.json 路径（仅 --list-html 现生成时用；默认 config/targets.json）")
     run(vars(ap.parse_args()))
