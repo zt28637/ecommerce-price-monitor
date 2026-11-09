@@ -8,27 +8,18 @@ venv/
 # IDE
 .idea/
 
-# 运行时数据：保留空目录（.gitkeep），内容一律不入库
-project/runtime/**
-!project/runtime/**/
-!project/runtime/**/.gitkeep
-project-v2/runtime/**
-!project-v2/runtime/**/
-!project-v2/runtime/**/.gitkeep
-project-v2/docs/
-
-# 影刀工作目录=仓库根，相对路径产生的运行数据（如 runtime/collect_state）
+# 运行时数据：一律不入库
 /runtime/
 
+# 本地文档：不入库（面试向/设计向/运行记录）
+/docs/
+
 # 敏感：环境与凭证（含 token/webhook），永不入库
-project/config/collect_env.json
-project/config/api_config.json
-project/config/database.json
-project-v2/config/database.json
-project-v2/config/alert_local.json
-project-v2/config/login_local.json
-project-v2/config/api_config.json
-project-v2/config/collect_env.json
+config/database.json
+config/alert_local.json
+config/login_local.json
+config/api_config.json
+config/collect_env.json
 .env
 .env.*
 
@@ -39,13 +30,6 @@ project-v2/config/collect_env.json
 .github/
 .mcp.json
 
-# docs 本地维护，不入库（面试向/部署向内容）
-project/docs/
-
 # OS / 临时
 Thumbs.db
 ~$*
-
-
-# 告警本地接口配置（webhook/secret），永不入库
-project/config/alert_local.json
