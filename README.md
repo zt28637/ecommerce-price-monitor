@@ -8,11 +8,11 @@
 | 版本 | 状态 | 链路 | 入口 |
 |------|------|------|------|
 | **v2.0** | 当前主线（2026-11-09 全链路实跑通过） | 登录 → 列表 → 详情 → 清洗 → 星型入库 → 告警 | [project-v2/](project-v2/) |
-| **v1.0** | 冻结存档（V0.4 全链路已跑通；计划迁出正式管理） | 影刀画布 + Python：登录 → 采集 → SKU 深采 → 清洗 → 入库 → 日报 → 告警 → BI | [project/modules/v1.0/](project/modules/v1.0/) |
+| **v1.0** | 已归档（V0.4 全链路已跑通；2026-11-09 移出仓库） | 影刀画布 + Python：登录 → 采集 → SKU 深采 → 清洗 → 入库 → 日报 → 告警 → BI | 压缩包（仓库外，见下） |
 
-两版**代码不互相 import**，只共享列契约与表结构；**配置各自独立**（v1 `project/config/`，v2 `project-v2/config/`）。版本边界见 [project/modules/README.md](project/modules/README.md)。
+两版**代码不互相 import**，只共享列契约与表结构。v2.0 配置在 `project-v2/config/`；v1.0 代码与配置已随归档包移出，本仓库不再包含。
 
-> **v1.0 去向**：v1.0 已冻结，**计划从本项目的正式管理中迁出**（迁往独立归档仓库或本地存档，只保留作品集与对照引用）。本仓库后续只维护 v2.0，不再接受 v1.0 功能修改。
+> **v1.0 去向**：已于 2026-11-09 从仓库移出，打包为 `F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip`（源码 / 配置 / 文档 / 少量原始运行日志，约 0.6 MB）。仓库后续只维护 v2.0，不再接受 v1.0 功能修改。
 
 ### v2.0 流程（当前）
 
@@ -24,7 +24,7 @@
 - 策略：零 API、零逐个点 SKU；影刀负责启动/登录浏览器，Python 通过 DrissionPage attach 复用同一浏览器做采集、解析与落库。
 - 设计源：[项目优化计划-2026-10-29.md](project-v2/docs/项目优化计划-2026-10-29.md)；测试记录：[v2-节点测试记录-2026-11-02.md](project-v2/docs/v2-节点测试记录-2026-11-02.md)。
 
-### v1.0 流程（冻结）
+### v1.0 流程（已归档）
 
 ```
 关键词搜索 → 销量排序 → 采集竞品列表 → SKU 级深采(API 优先/网页兜底)
@@ -38,7 +38,7 @@
 | 自动化链路 | 影刀画布 **10 个流程**（主流程 main 27 块；采集 91 / B-SKU 110 / B1 55 / B2 74 / 翻页 4 / 滚动 69 / 登录 2·22·33）+ **10 个 Python 模块**（业务 8 + 工具箱 2），一次跑通零人工 |
 | 看板 | 4 张视图 → 12 张图 → 1 个看板，全 SQL 可追溯 |
 
-## v1.0 架构（冻结存档 · 计划迁出）
+## v1.0 架构（已归档）
 
 ```
                   ┌───────────────────────────── 影刀 RPA（画布） ─────────────────────────────┐
@@ -74,7 +74,7 @@
 ### 1. 接口"假下架"与多版本容错
 
 JustOneAPI 的 v9 对**在售商品**也会返回 `data: "商品已经下架"`（字符串而非对象）。旧代码 `if result.get("data"):` 会让假话短路版本轮转，直接把在售商品当死链。
-修复：成功闸门必须是"非空 dict" + 业务失败继续轮转下一版本（[api.py](project/modules/v1.0/2.竞品SKU数据采集/api.py)），下架数据进入类型守卫后判空跳过，**流程不中断但绝不写脏数据**。
+修复：成功闸门必须是"非空 dict" + 业务失败继续轮转下一版本（v1.0 `2.竞品SKU数据采集/api.py`，已归档），下架数据进入类型守卫后判空跳过，**流程不中断但绝不写脏数据**。
 
 ### 2. 采集链路的"外部快照过期"型数据一致性
 
@@ -96,35 +96,31 @@ RPA 流程本体加密存在客户端里，不可 diff、不可 review。本项�
 ## 目录结构
 
 ```
-├── project/                             # v1.0 冻结存档（计划迁出正式管理）
-│   ├── config/                          # v1 独立配置与 DDL
-│   ├── modules/
-│   │   ├── README.md                    # 版本目录与边界
-│   │   └── v1.0/                        # 0-6 环节 + 工具箱 + 主流程/索引
-│   ├── docs/                            # 本地文档、测试记录（不入 git）
-│   ├── tools/                           # studio-mcp 画布转录 / 密钥自检（两版共用）
-│   └── runtime/                         # v1 运行时产物（不入 git）
-└── project-v2/                          # 当前主线（独立配置/运行时）
-    ├── model/0.淘宝自动化登录/ ... 5.价格告警/
-    ├── config/                          # targets / alert / database.example 等
-    ├── runtime/                         # v2 运行时（含 profile，不入 git）
-    ├── docs/                            # 本地文档（不入 git）
-    └── README.md
+├── project/
+│   └── tools/                           # 两版共用：studio-mcp 画布转录 / 密钥自检
+├── project-v2/                          # 当前主线（独立配置/运行时）
+│   ├── model/0.淘宝自动化登录/ ... 5.价格告警/
+│   ├── config/                          # targets / alert / database.example 等
+│   ├── runtime/                         # v2 运行时（含 profile，不入 git）
+│   ├── docs/                            # 本地文档（不入 git）
+│   └── README.md
+└── _archives/                           # 仓库外（本地）：v1.0 压缩包
 ```
+
+> v1.0 的 `config / modules / docs / utils / runtime` 已移出仓库，统一存放在仓库外的单个压缩包中；`project/tools` 因两版共用保留。
 
 ## 快速开始
 
 ```bash
 pip install -r requirements.txt
 
-# 配置（两版独立，凭据不进仓库）：
-#   v1：project/config/database.json、api_config.json
+# 配置（凭据不进仓库）：
 #   v2：project-v2/config/database.json、alert_local.json
 
-# ---- v1.0（冻结，计划迁出）----
-mysql -u root -p < project/config/init_database_v0.sql   # 三表
-mysql -u root -p < project/config/init_bi_views.sql      # 看板四视图（幂等）
-# 影刀打开旧应用 → 跑登录凭据设置 → 运行 main
+# ---- v1.0（已归档）----
+# 源码 / 配置 / 看板教程 / 少量运行日志在仓库外压缩包：
+#   F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip
+# 如需恢复：解压到仓库根目录（内部路径为 project/...），数据库 DDL 在包内 project/config/
 
 # ---- v2.0（当前主线）----
 # 0 登录：影刀跑 login_gate / login_qr
@@ -133,9 +129,6 @@ mysql -u root -p < project/config/init_bi_views.sql      # 看板四视图（幂
 # 4 入库：python "project-v2/model/4.数据入库/run_ingest.py" --date YYYY-MM-DD --init-schema
 # 5 告警：python "project-v2/model/5.价格告警/run_alert.py" --date YYYY-MM-DD --preview
 ```
-
-看板搭建（v1.0）：**先读 [6-2 从零到维护全教程](project/modules/v1.0/6.竞品数据看板/6-2-看板全流程教程.md)**（12 章：装 Metabase → 建视图 → 12 张图 → 布局 → 筛选器 → 维护 → 排错 → 面试讲法）；
-速查：[6-0 搭建 SOP](project/modules/v1.0/6.竞品数据看板/6-0看板搭建.md) · [6-1 日常运维](project/modules/v1.0/6.竞品数据看板/6-1日常运维.md)
 
 ## 设计取舍（也可当面试题目）
 

@@ -8,7 +8,7 @@
 
 1. `../MEMORY.md`
 2. 本文 + `AGENTS.md`
-3. [project/docs/README.md](project/docs/README.md)（v1.0 / v2.0 / shared 分层）→ [agent/INDEX.md](project/docs/agent/INDEX.md) → 具体文件（⚠️ docs/ 本地维护、不入 git）
+3. [project-v2/README.md](project-v2/README.md) → `project-v2/docs/`（本地维护、不入 git）→ 具体文件；v1.0 文档在仓库外归档包
 
 ---
 
@@ -34,17 +34,17 @@
 
 ---
 
-## 项目主体（v1 `project/` + v2 同级 `project-v2/`）
+## 项目主体（v2 `project-v2/`；v1 已归档）
 
 ```
-project/       # v1.0 冻结存档（计划迁出正式管理）：config · modules/v1.0 · runtime · docs
-project-v2/          # 当前主线：节点目录 · config · runtime · docs
+project/tools/   # 两版共用：画布转录 · 密钥自检
+project-v2/      # 当前主线：model · config · runtime · docs
 ```
 
-- **v1.0** = 影刀重体系（V0.4，冻结存档 · 计划迁出正式管理）· **v2.0** = 重写版（当前主线）
-- 版本边界：[project/modules/README.md](project/modules/README.md)
-- 配置分开：v1 [project/config/](project/config/)，v2 [project-v2/config/](project-v2/config/)
-- Python 根：v1 [project/modules/](project/modules/)，v2 [project-v2/](project-v2/)
+- **v1.0** = 影刀重体系（V0.4，**已归档移出仓库**，压缩包在仓库外）· **v2.0** = 重写版（当前主线）
+- 配置：v2 [project-v2/config/](project-v2/config/)；v1 配置在归档包内
+- Python 根：[project-v2/model/](project-v2/model/)
+- v1 归档包：`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip`
 
 ---
 
@@ -54,30 +54,32 @@ project-v2/          # 当前主线：节点目录 · config · runtime · docs
 
 | 节点 | 内容 | 模块 |
 |------|------|------|
-| 0 登录 | 登录门禁 + 扫码/短信/密码 + 登录态台账 | [0.淘宝自动化登录](project-v2/0.淘宝自动化登录/) |
-| 1 列表 | 搜索 → 过滤 → 拟人滚动 → 翻页 → JSONL | [1.列表页采集](project-v2/1.列表页采集/) |
-| 2 详情 | 详情页 → ICE JSON → SKU 解析 | [2.详情页采集](project-v2/2.详情页采集/) |
-| 3 清洗 | 质量分级 + Excel/HTML/JSONL 日报 | [3.数据清洗](project-v2/3.数据清洗/) |
-| 4 入库 | 星型模型：幂等 / 回滚 / 迟到标记 | [4.数据入库](project-v2/4.数据入库/) |
-| 5 告警 | 历史新低 / 降价 / 涨幅 → file / 钉钉 / 飞书 | [5.价格告警](project-v2/5.价格告警/) |
+| 0 登录 | 登录门禁 + 扫码/短信/密码 + 登录态台账 | [0.淘宝自动化登录](project-v2/model/0.淘宝自动化登录/) |
+| 1 列表 | 搜索 → 过滤 → 拟人滚动 → 翻页 → JSONL | [1.列表页采集](project-v2/model/1.列表页采集/) |
+| 2 详情 | 详情页 → ICE JSON → SKU 解析 | [2.详情页采集](project-v2/model/2.详情页采集/) |
+| 3 清洗 | 质量分级 + Excel/HTML/JSONL 日报 | [3.数据清洗](project-v2/model/3.数据清洗/) |
+| 4 入库 | 星型模型：幂等 / 回滚 / 迟到标记 | [4.数据入库](project-v2/model/4.数据入库/) |
+| 5 告警 | 历史新低 / 降价 / 涨幅 → file / 钉钉 / 飞书 | [5.价格告警](project-v2/model/5.价格告警/) |
 
-### v1.0（冻结存档）
+### v1.0（已归档移出仓库）
 
-| 流程 | 内容 | 模块 |
-|------|------|------|
-| ⓪ 自动化登录 | 影刀画布：凭据设置 → 模拟登录 | [0.淘宝自动化登录](project/modules/v1.0/0.淘宝自动化登录/) |
-| ① 商品数据采集 | 影刀采集 → 自定义数据账本 | [1.竞品商品数据采集](project/modules/v1.0/1.竞品商品数据采集/) |
-| ② 竞品SKU数据采集 | API 优先 → 网页兜底 → 清洗 → 录入 | [2.竞品SKU数据采集](project/modules/v1.0/2.竞品SKU数据采集/) |
-| ③ 数据清洗 | product_clean：过滤 + 13 列标准表 | [3.竞品数据清洗](project/modules/v1.0/3.竞品数据清洗/) |
-| ④ 数据汇总 | 入库三表 + 日报 Excel | [4.竞品数据汇总](project/modules/v1.0/4.竞品数据汇总/) |
-| ⑤ 价格告警 | 历史新低 / 较上次降价 → 钉钉 | [5.竞品价格告警](project/modules/v1.0/5.竞品价格告警/) |
-| ⑥ BI 看板 | Metabase 4 视图 + 12 图 | [6.竞品数据看板](project/modules/v1.0/6.竞品数据看板/) |
+| 流程 | 内容 |
+|------|------|
+| ⓪ 自动化登录 | 影刀画布：凭据设置 → 模拟登录 |
+| ① 商品数据采集 | 影刀采集 → 自定义数据账本 |
+| ② 竞品SKU数据采集 | API 优先 → 网页兜底 → 清洗 → 录入 |
+| ③ 数据清洗 | product_clean：过滤 + 13 列标准表 |
+| ④ 数据汇总 | 入库三表 + 日报 Excel |
+| ⑤ 价格告警 | 历史新低 / 较上次降价 → 钉钉 |
+| ⑥ BI 看板 | Metabase 4 视图 + 12 图 |
+
+> 源码与文档在仓库外归档包：`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip`
 
 ---
 
 ## 硬性约束（摘要）
 
-- **掩码价**：`sku_ingest.py` 自动跳过，不入库
-- **配置**：v1 `project/config/`，v2 `project-v2/config/`（非仓库根 `config/`；两版不共用）
-- **Python 根**：`project/modules/`
+- **掩码价**：v2 `3.数据清洗` 标 `price_complete`，入库只收 `auto_pass` / `approved`
+- **配置**：v2 `project-v2/config/`（非仓库根 `config/`；v1 配置在归档包内）
+- **Python 根**：`project-v2/model/`
 - **完整规则**：[AGENTS.md](AGENTS.md)

@@ -50,7 +50,7 @@ python "model\5.价格告警\run_alert.py" --date 2026-11-01 --database price_mo
 |------|------|------|
 | `config/targets.json` | 采集目标（关键词、价格区间、页数、目标数） | 已入库 |
 | `config/alert_local.json` | 飞书/钉钉 webhook、secret（**gitignore**） | 需按 `alert_local.example.json` 自建 |
-| `config/database.json` | MySQL 连接（**gitignore**） | 需自建（可参考 `project/config/database.json`） |
+| `config/database.json` | MySQL 连接（**gitignore**） | 需自建（模板见 `config/database.example.json`） |
 | `config/keywords.json` | 旧词单（兼容读取） | 未创建，按需补 |
 | `config/promo_dates.json` | 促销日期，用于告警降级 | 未创建，按需补 |
 | `config/alert.json` | 告警阈值与通道（占位符可入库） | 未创建，代码有内置默认 |
