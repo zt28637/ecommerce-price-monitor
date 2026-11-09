@@ -2,16 +2,16 @@
 
 用法：
   # 建表（幂等，只新增 v2 对象，不动 v1 的 competitor_*）
-  python run_ingest.py --date 2026-11-01 --init-schema
+  python run_ingest.py --date YYYY-MM-DD --init-schema
 
   # 正常入库（读 item_reviewed/sku_reviewed 优先）
-  python run_ingest.py --date 2026-11-01
+  python run_ingest.py --date YYYY-MM-DD
 
   # 演练：完整跑一遍再回滚，不写事实
-  python run_ingest.py --date 2026-11-01 --dry-run
+  python run_ingest.py --date YYYY-MM-DD --dry-run
 
   # 测试库
-  python run_ingest.py --date 2026-11-01 --database price_monitor_v2_test
+  python run_ingest.py --date YYYY-MM-DD --database price_monitor_v2_test
 
 消费口径（用户 11-01 定）：
   · 只入 review_status ∈ {auto_pass, approved} 的行

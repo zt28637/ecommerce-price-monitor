@@ -1,6 +1,6 @@
 # model/ — 节点与入口
 
-> 状态：**开发中**（2026-11-01 框架落地；2026-11-08 登录层收口；**2026-11-09 全链路实跑通过**：列表 40 → 详情 40/40 · 704 SKU → 清洗 → 入库 → 告警）。
+> 状态：**开发中**（框架落地 → 登录层收口 → **全链路实跑通过**：列表 40 → 详情 40/40 · 704 SKU → 清洗 → 入库 → 告警）。
 > 定版策略：零 API、零逐个点 SKU；影刀负责启动/登录浏览器，Python 通过 DrissionPage attach 复用同一浏览器做采集、解析与落库。
 > 设计源：`docs/`（本地，不入 git）· 登录层细节：[0.淘宝自动化登录/README.md](0.淘宝自动化登录/README.md)
 
@@ -16,7 +16,7 @@
 | 5 告警 | [5.价格告警/](5.价格告警/) `run_alert.py` | 历史新低 / 降价 / 涨幅 / 新品；文件通道优先，可发送 | `python model/5.价格告警/run_alert.py --preview` |
 | 工具箱 | [tool/](tool/) `feishu_notify.py` | 飞书通知：签名 / 重试 / 脱敏 / 自测；画布与 Python 共用 | `python model/tool/feishu_notify.py --test` |
 
-主流程画布：[../主流程_main.md](../主流程_main.md)（**仓库内仍是 2026-11-08 的 18 块转录，已过期**；现网 `main` 已扩到 36 块，串起 登录 → 列表 → 详情 → 清洗 → 入库 → 告警，待重新转录覆盖）。
+主流程画布：[../主流程_main.md](../主流程_main.md)（**仓库内仍是 旧版 18 块转录，已过期**；现网 `main` 已扩到 36 块，串起 登录 → 列表 → 详情 → 清洗 → 入库 → 告警，待重新转录覆盖）。
 登录层细节：[0.淘宝自动化登录/README.md](0.淘宝自动化登录/README.md)。
 节点测试脚本：[测试/](测试/)。
 
@@ -30,16 +30,16 @@ python "model\测试\login\test_login_entry.py"
 python "model\测试\login\test_classify_login.py"
 
 # 3 清洗（离线可跑）
-python "model\3.数据清洗\run_clean.py" --date 2026-11-01 `
+python "model\3.数据清洗\run_clean.py" --date YYYY-MM-DD `
   --list-raw  runtime\_sample\list_raw `
   --detail-raw runtime\_sample\detail_raw
 
 # 4 入库（先 --dry-run）
-python "model\4.数据入库\run_ingest.py" --date 2026-11-01 --database price_monitor_v2_test --init-schema
-python "model\4.数据入库\run_ingest.py" --date 2026-11-01 --database price_monitor_v2_test --dry-run
+python "model\4.数据入库\run_ingest.py" --date YYYY-MM-DD --database price_monitor_v2_test --init-schema
+python "model\4.数据入库\run_ingest.py" --date YYYY-MM-DD --database price_monitor_v2_test --dry-run
 
 # 5 告警（默认 file 通道，不联网）
-python "model\5.价格告警\run_alert.py" --date 2026-11-01 --database price_monitor_v2_test --preview
+python "model\5.价格告警\run_alert.py" --date YYYY-MM-DD --database price_monitor_v2_test --preview
 ```
 
 > `model\1.列表页采集\collect_list.py` 由影刀「调用模块」运行；直接 `python collect_list.py` 也能跑（`main(args=None)` 返回统计，见 L-01）。
@@ -66,7 +66,7 @@ clean/<YYYYMMDD>/ · alerts/<YYYYMMDD>/ · run_log/ · samples/ · _sample/
 
 ## 已知待办
 
-- 节点 0–5 已于 2026-11-09 全链路实跑通过（登录 auto、列表 40、详情 40/40 · 704 SKU、0 失败 / 0 风控）；
+- 节点 0–5 已于 全链路实跑通过（登录 auto、列表 40、详情 40/40 · 704 SKU、0 失败 / 0 风控）；
 - 现网 `main` 调详情仍写死冒烟参数 `limit=3` / `interval=0`，正式跑前必须改；
 - 影刀日志对 Python 模块无感（列表层只用内建 `print`，画布调用后无日志节点），静默失败难定位；
 - BI 看板暂缓；

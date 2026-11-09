@@ -2,7 +2,7 @@
 
 纯函数，不碰浏览器；影刀应用与系统 Python 都能 import。
 
-2025 天猫模板实测（小天才电话手表详情1.html）：
+天猫模板实测（小天才电话手表详情1.html）：
   · ICE JSON 在 `var b = {...}; window.__ICE_APP_CONTEXT__=b;`
   · 商品起售价在 componentsVO.priceVO.price（priceDesc="起"）
   · skuCore.skuItem.hideOtherPrice=true 时，sku2info 只有当前 SKU 带 price，
@@ -50,7 +50,7 @@ def extract_ice(html):
     if idx < 0:
         raise ValueError("no __ICE_APP_CONTEXT__")
 
-    # 2025 天猫模板：var a = window.__ICE_APP_CONTEXT__ || {}; var b = {...}; ... =b;
+    # 天猫模板：var a = window.__ICE_APP_CONTEXT__ || {}; var b = {...}; ... =b;
     j = html.find("var b = ", idx)
     if j >= 0:
         start = html.find("{", j)

@@ -1,5 +1,5 @@
 # login_gate  (flow_id=process1, 组=0.淘宝自动化登录, 块数=16)
-# 转录时间 2026-11-08 22:19 · 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
+# 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
 # 指令名/参数名=影刀官方内置指令目录（见 tools/sb_blocks_zh.json）· 行尾[英文ID]=机器名，可 grep
 
 001  Try  [programing.try]

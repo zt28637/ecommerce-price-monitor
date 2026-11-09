@@ -324,7 +324,7 @@ def main(args=None):
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     root = r"F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\runtime\_sample\detail_raw"
-    got = clean_files([root], date="2026-11-01")
+    got = clean_files([root], date=None)
     s = got["stats"]
     print("详情行 %(raw_rows)d -> 商品 %(products)d | 有价SKU %(skus_priced)d | 无价库存 %(inventory_rows)d"
           % s)

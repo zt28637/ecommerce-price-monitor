@@ -215,7 +215,7 @@ def main(args=None):
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     root = r"F:\Programs\RPA自动化\1-淘宝竞品价格监控自动化\runtime\_sample\list_raw"
-    got = clean_files([root], date="2026-11-01")
+    got = clean_files([root], date=None)
     print("文件:", [f["file"] for f in got["stats"]["files"]])
     s = got["stats"]
     print("raw %(raw_rows)d -> 去重 %(deduped)d -> 通过 %(passed)d / 过滤 %(filtered)d" % s)

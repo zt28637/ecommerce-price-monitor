@@ -2,14 +2,14 @@
 
 用法：
   # 只生成，不发（默认）
-  python run_alert.py --date 2026-11-01
+  python run_alert.py --date YYYY-MM-DD
 
   # 指定测试库
-  python run_alert.py --date 2026-11-01 --database price_monitor_v2_test
+  python run_alert.py --date YYYY-MM-DD --database price_monitor_v2_test
 
   # 真正推送（需在 alert_local.json 或环境变量里配好 webhook）
-  python run_alert.py --date 2026-11-01 --send
-  python run_alert.py --date 2026-11-01 --send --send-daily --channel feishu
+  python run_alert.py --date YYYY-MM-DD --send
+  python run_alert.py --date YYYY-MM-DD --send --send-daily --channel feishu
 
 目录：runtime/alerts/<YYYYMMDD>/
   alerts.jsonl        告警明细（机器读）

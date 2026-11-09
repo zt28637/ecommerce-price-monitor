@@ -148,7 +148,7 @@ def norm_sales(raw):
 # 时间 / 文件名
 # ------------------------------------------------------------
 def crawl_date_from_ts(ts):
-    """'20261031_2355' / '2026-10-31' -> '2026-10-31'；认不出返回 ''。"""
+    """'YYYYMMDD_HHMM' / 'YYYY-MM-DD' -> 'YYYY-MM-DD'；认不出返回 ''。"""
     s = norm_text(ts)
     m = re.match(r"^(\d{4})(\d{2})(\d{2})(?:_|$)", s)
     if m:
@@ -159,7 +159,7 @@ def crawl_date_from_ts(ts):
 
 
 def crawl_ts_from_filename(path):
-    """'20261031_2355.jsonl' -> '20261031_2355'；认不出返回 ''。"""
+    """'YYYYMMDD_HHMM.jsonl' -> 'YYYYMMDD_HHMM'；认不出返回 ''。"""
     m = re.match(r"^(\d{8}_\d{4,6})(?:\.|$)", os.path.basename(norm_text(path)))
     return m.group(1) if m else ""
 
@@ -413,7 +413,6 @@ if __name__ == "__main__":
     for c in ["2000+人付款", "3万+人付款", "1.2万人收货", "行业销量前20",
               "本月行业热销", "", None, "7000+人收货"]:
         print("%-12r -> %s" % (c, norm_sales(c)))
-    print("date 20261031_2355 ->", crawl_date_from_ts("20261031_2355"))
     print("price '--' ->", to_float("--"), "| '¥1,299.00' ->", to_float("¥1,299.00"))
     print("grade", grade(["sales_missing"]), grade(["missing_key"]),
           grade(["sales_missing", "missing_key"]))

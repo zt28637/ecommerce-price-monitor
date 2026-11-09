@@ -16,7 +16,7 @@ sys.path.insert(0, str(LOGIN_DIR))
 
 import login_entry as le  # noqa: E402
 
-NOW = datetime.datetime(2026, 11, 7, 23, 30, 0)
+NOW = datetime.datetime.now().replace(hour=23, minute=30, second=0, microsecond=0)
 
 
 def dt(hours=0, days=0):
@@ -56,7 +56,8 @@ def main() -> int:
                                            "kick_date": NOW.strftime("%Y-%m-%d")})["reason"],
                    "kicked_twice")
     failed += case("B07 昨天被踢 2 次 → 允许",
-                   le.budget_decision(NOW, {"kick_count": 2, "kick_date": "2026-11-06"})["reason"],
+                   le.budget_decision(NOW, {"kick_count": 2,
+                                           "kick_date": (NOW - datetime.timedelta(days=1)).strftime("%Y-%m-%d")})["reason"],
                    "ok")
 
     # ---- decide_action ----

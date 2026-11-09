@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """登录入口（影刀 CodeFlow）：判活 → 快速进入 → 人工兜底。
 
-职责边界（2026-11-08 优化）：
+职责边界：
   · 浏览器启动/复用归 login_browser.ensure（DP），本模块只 attach 判活。
   · 账密自动登录默认关闭（ALLOW_PASSWORD=False）；扫码 / 人工优先。
   · wait_manual() 负责人工等待：确保登录页 → 二维码截图 → 轮询 URL / 认证 cookie。

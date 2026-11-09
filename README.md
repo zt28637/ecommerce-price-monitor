@@ -69,7 +69,7 @@ python "model/5.价格告警/run_alert.py" --date YYYY-MM-DD --preview
 
 ## 验证与边界（诚实说明）
 
-- ✅ **2026-11-09 全链路实跑**：登录 auto → 列表 40 条 → 详情 40/40（704 个 SKU，0 失败、0 风控命中）→ 清洗（37 绿 / 3 黄）→ 入库 40 item + 704 SKU → 告警 0 条（首日无历史）。明细见 [VERSION.md](VERSION.md)。
+- ✅ **全链路实跑**：登录 auto → 列表 40 条 → 详情 40/40（704 个 SKU，0 失败、0 风控命中）→ 清洗（37 绿 / 3 黄）→ 入库 40 item + 704 SKU → 告警 0 条（首日无历史）。明细见 [VERSION.md](VERSION.md)。
 - ⚠️ 只针对淘宝 PC 端详情页一套 DOM；平台改版需要更新解析与元素。
 - ⚠️ 采集频率未做分布式调度；长期多账号需要引入代理与队列。
 - ⚠️ 画布 `main` 调详情仍为冒烟参数（`limit=3` / `interval=0`），正式跑前需改；影刀日志对 Python 模块仍偏静默，待补画布日志节点。
@@ -77,7 +77,7 @@ python "model/5.价格告警/run_alert.py" --date YYYY-MM-DD --preview
 ## 历史
 
 v1.0（影刀重体系 V0.4）已归档，源码 / 配置 / 文档打包在仓库外：
-`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip`。版本沿革见 [VERSION.md](VERSION.md)。
+`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0.zip`。版本沿革见 [VERSION.md](VERSION.md)。
 
 ---
 

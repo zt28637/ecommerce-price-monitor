@@ -1,5 +1,5 @@
 # login_qr  (flow_id=process2, 组=0.淘宝自动化登录, 块数=9)
-# 转录时间 2026-11-08 22:19 · 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
+# 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
 # 指令名/参数名=影刀官方内置指令目录（见 tools/sb_blocks_zh.json）· 行尾[英文ID]=机器名，可 grep
 
 001  调用模块  模块名称=login_entry  方法名称=wait_manual  方法参数列表=group_array=[]  返回值类型=dict  [process.invoke_module]

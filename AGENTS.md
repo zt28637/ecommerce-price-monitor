@@ -39,9 +39,9 @@ L3 本项目    AGENTS.md + model/
 ## 项目状态
 
 > 当前仓库只维护这一条链路：登录 → 列表 → 详情 → 清洗 → 星型入库 → 告警。
-> 2026-11-09 全链路实跑通过：登录 auto、列表 40、详情 40/40（704 SKU，0 失败 / 0 风控）、清洗 37 绿/3 黄、入库 40 item + 704 SKU、告警 0 条。
+> 全链路实跑通过：登录 auto、列表 40、详情 40/40（704 SKU，0 失败 / 0 风控）、清洗 37 绿/3 黄、入库 40 item + 704 SKU、告警 0 条。
 
-**策略**（以 [docs/项目优化计划-2026-10-29.md](docs/项目优化计划-2026-10-29.md) 为准）：
+**策略**（设计源在本地 `docs/`）：
 
 - 零 API、零逐个点 SKU；列表页 + 详情页 `__ICE_APP_CONTEXT__` 解析；
 - **影刀负责编排与台账，DrissionPage 负责浏览器**：`login_browser.ensure` 启动/复用固定 profile + 9223 的 Edge，Python 通过 DP attach 做判活、扫码、采集、解析与落库（不另起临时 profile）；
@@ -50,7 +50,7 @@ L3 本项目    AGENTS.md + model/
 **硬性边界**：
 
 - 不再有 v1/v2 双目录；新功能直接进 `model/`，不回改历史版本。
-- 历史 v1.0 已移出仓库，归档包在 `F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0_2026-11-09.zip`，只作作品集/对照引用。
+- 历史 v1.0 已移出仓库，归档包在 `F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0.zip`，只作作品集/对照引用。
 
 ---
 
@@ -60,7 +60,7 @@ L3 本项目    AGENTS.md + model/
 
 - `config/database.json` / `alert_local.json` / `login_local.json` / `collect_env.json` / `.env` **一律 gitignore**，仓库只放 `database.example.json` 占位模板
 - **提交前必跑（本地工具）**：`python tools/check_secrets.py --staged`（只查暂存区），退出码非 0 不许提交；该工具本身不入库
-- 2026-10-26 事故：MySQL 密码与 JustOneAPI token 曾随两个配置文件进入历史并被推送 → 已删除仓库重建、重写历史剔除、全平台轮换凭据；此后以本规则为准
+- 历史事故：MySQL 密码与 JustOneAPI token 曾随两个配置文件进入历史并被推送 → 已删除仓库重建、重写历史剔除、全平台轮换凭据；此后以本规则为准
 
 ### 掩码价处理
 

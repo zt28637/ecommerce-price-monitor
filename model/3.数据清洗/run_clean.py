@@ -1,13 +1,13 @@
 """清洗总入口：list_raw + detail_raw -> clean/<YYYYMMDD>/ 产物 + 一份 Excel 日报。
 
 用法（系统 Python，不依赖影刀 venv）：
-  python run_clean.py --date 2026-11-01 \
+  python run_clean.py --date YYYY-MM-DD \
       --list-raw  runtime/_sample/list_raw \
       --detail-raw runtime/_sample/detail_raw
 
   # 没有 list_raw 时，可从已保存的列表页 HTML 现生成（回归用）
-  python run_clean.py --date 2026-11-01 --list-html runtime/samples/x.html \
-      --list-ts 20261101_0900 --detail-raw runtime/_sample/detail_raw
+  python run_clean.py --date YYYY-MM-DD --list-html runtime/samples/x.html \
+      --list-ts YYYYMMDD_HHMM --detail-raw runtime/_sample/detail_raw
 
 流程（顺序不能换）：
   读 list -> 清洗去重 -> 读 detail -> 清洗去重 -> 合并 item
@@ -57,7 +57,7 @@ def generate_list_raw(html_path, ts, root, targets_config=None):
     """parse_list + filter_product -> list_raw/<关键词>/<ts>.jsonl，返回文件路径。
 
     targets_config 是采集目标配置（targets.json），**不是** --config 的清洗阈值；
-    两者混用会让关键词/价格过滤静默失效（见 2026-11-09 修复）。
+    两者混用会让关键词/价格过滤静默失效（已修复）。
 
     产出与 collect_list 保持一致：只写通过过滤的行（落盘契约见
     docs/列表页采集-待办清单 L-05，清洗层对缺 passed 的行视为通过）。

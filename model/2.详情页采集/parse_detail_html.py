@@ -1,4 +1,4 @@
-"""详情页 SKU 价格解析（按《详情页SKU解析规格-2026-11-01》实现）。
+"""详情页 SKU 价格解析（按《详情页SKU解析规格》实现）。
 
 契约：parse_detail_html(html) -> list[dict]，每行 6 个字段：
   sku_id / spec / price / price_fen / stock / stock_text
