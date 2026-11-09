@@ -41,8 +41,9 @@ model/       # 0 登录 / 1 列表 / 2 详情 / 3 清洗 / 4 入库 / 5 告警 +
 config/      # targets / alert / database.example（真实凭据 gitignore）
 runtime/     # 运行时产物 + profile（不入 git）
 docs/        # 设计源 / 测试记录 / 运行问题（本地，不入 git）
-tools/       # studio-mcp 画布转录 / 密钥自检
 ```
+
+> `tools/` 是本地私有工具（画布转录 MCP、密钥自检），保留在本地但不入库。
 
 - 当前版本 **v2.0**，仓库只维护这一条链路，不再有 v1/v2 双目录。
 - 配置：[config/](config/) · Python 根：[model/](model/) · 画布转录：[主流程_main.md](主流程_main.md)
@@ -68,5 +69,5 @@ tools/       # studio-mcp 画布转录 / 密钥自检
 - **掩码价**：`3.数据清洗` 标 `price_complete`，入库只收 `auto_pass` / `approved`
 - **配置**：`config/`（真实凭据 gitignore，模板 `database.example.json`）
 - **Python 根**：`model/`
-- **提交前**：`python tools/check_secrets.py --staged`
+- **提交前（本地工具）**：`python tools/check_secrets.py --staged`（工具本身不入库）
 - **完整规则**：[AGENTS.md](AGENTS.md)

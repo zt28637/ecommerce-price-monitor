@@ -35,10 +35,11 @@
 ├── config/                # targets / alert / database.example（真实凭据 gitignore）
 ├── runtime/               # 运行时产物（list_raw / detail_raw / clean / alerts / run_log / profile，不入 git）
 ├── docs/                  # 设计源、测试记录、运行问题（本地，不入 git）
-├── tools/                 # studio-mcp 画布转录 / 密钥自检
 ├── 主流程_main.md
 └── README.md
 ```
+
+> `tools/` 是本地私有工具（画布转录 MCP、密钥自检），保留在本地但不入库。
 
 ## 快速开始
 

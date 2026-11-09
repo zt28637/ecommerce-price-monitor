@@ -29,9 +29,10 @@ L3 本项目    AGENTS.md + model/
 ├── config/                              # targets / alert / database.example（真实凭据 gitignore）
 ├── runtime/                             # 运行时产物 + profile（不入 git）
 ├── docs/                                # 设计源、测试记录、运行问题（本地，不入 git）
-├── tools/                               # studio-mcp 画布转录 / 密钥自检
 └── 主流程_main.md
 ```
+
+> `tools/` 是本地私有工具（画布转录 MCP、密钥自检），保留在本地但**不入库**。
 
 ---
 
@@ -58,7 +59,7 @@ L3 本项目    AGENTS.md + model/
 ### 凭据永不入库（硬性）
 
 - `config/database.json` / `alert_local.json` / `login_local.json` / `collect_env.json` / `.env` **一律 gitignore**，仓库只放 `database.example.json` 占位模板
-- **提交前必跑**：`python tools/check_secrets.py --staged`（只查暂存区），退出码非 0 不许提交
+- **提交前必跑（本地工具）**：`python tools/check_secrets.py --staged`（只查暂存区），退出码非 0 不许提交；该工具本身不入库
 - 2026-10-26 事故：MySQL 密码与 JustOneAPI token 曾随两个配置文件进入历史并被推送 → 已删除仓库重建、重写历史剔除、全平台轮换凭据；此后以本规则为准
 
 ### 掩码价处理
