@@ -174,7 +174,10 @@ if __name__ == "__main__":
     import sys
 
     sys.stdout.reconfigure(encoding="utf-8")
-    path = sys.argv[1] if len(sys.argv) > 1 else r"d:\个人知识库\detail.html"
+    if len(sys.argv) < 2:
+        print("用法: python parse_detail_html.py <html文件>")
+        sys.exit(2)
+    path = sys.argv[1]
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         html = f.read()
 

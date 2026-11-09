@@ -77,8 +77,4 @@ python "model/5.价格告警/run_alert.py" --date YYYY-MM-DD --preview
 ## 历史
 
 v1.0（影刀重体系 V0.4）已归档，源码 / 配置 / 文档打包在仓库外：
-`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0.zip`。版本沿革见 [VERSION.md](VERSION.md)。
-
----
-
-**作者**：周涛 · **用途**：RPA / 自动化开发作品集
+仓库外本地归档包。版本沿革见 [VERSION.md](VERSION.md)。

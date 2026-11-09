@@ -47,7 +47,7 @@ docs/        # 设计源 / 测试记录 / 运行问题（本地，不入 git）
 
 - 当前版本 **v2.0**，仓库只维护这一条链路，不再有 v1/v2 双目录。
 - 配置：[config/](config/) · Python 根：[model/](model/) · 画布转录：[主流程_main.md](主流程_main.md)
-- 历史 v1.0 归档包：`F:\Programs\RPA自动化\_archives\淘宝竞品价格监控_v1.0.zip`
+- 历史 v1.0 归档包：仓库外本地归档包
 
 ---
 
