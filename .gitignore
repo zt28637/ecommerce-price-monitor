@@ -29,10 +29,15 @@ config/collect_env.json
 
 # AI 工具本地配置（任意层级的点目录/文件），不入库
 .claude/
+.codex/
 .cursor/
 .vscode/
 .github/
 .mcp.json
+
+# 画布工具生成物（本地可重建）：sb_blocks_zh 由 extract_sb_catalog.py 生成，prototype_names 是转录缓存
+tools/shadowbot-canvas/sb_blocks_zh.json
+tools/shadowbot-canvas/prototype_names.json
 
 # OS / 临时
 Thumbs.db
