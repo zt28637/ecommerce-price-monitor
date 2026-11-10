@@ -46,7 +46,7 @@ def _log(msg):
             return
         except Exception:
             pass
-    print(msg)
+    print(msg, flush=True)
 
 
 def _ensure_dir(path):

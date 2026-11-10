@@ -1,5 +1,21 @@
 import random, time
 
+try:                       # 影刀 CodeFlow 内写运行日志；命令行退回 print
+    import xbot
+except ImportError:
+    xbot = None
+
+
+def log(msg):
+    if xbot is not None:
+        try:
+            xbot.app.logging.info(msg)
+            return
+        except Exception:
+            pass
+    print(msg, flush=True)
+
+
 def _card_ids(page):
     """返回当前列表页所有卡片的 ID 集合"""
     return page.run_js(
@@ -62,7 +78,7 @@ def scroll_to_bottom(page, _card_ids):
             else:
                 still = 0
             if still >= 2:
-                print("到底了，卡片数=%d，轮数=%d" % (len(ids_now), i))
+                log("到底了，卡片数=%d，轮数=%d" % (len(ids_now), i))
                 reached = True
                 cards_prev = ids_now
                 break
@@ -74,7 +90,7 @@ def scroll_to_bottom(page, _card_ids):
         cards_prev = set(_card_ids(page))
 
     if not reached:
-        print("20 轮还没到底，距底 %dpx，卡片数=%d（可能是半渲染，别直接落盘）"
+        log("20 轮还没到底，距底 %dpx，卡片数=%d（可能是半渲染，别直接落盘）"
               % (distance_to_bottom(page), len(cards_prev)))
     return reached
 

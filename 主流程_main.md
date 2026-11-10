@@ -1,4 +1,4 @@
-# main  (flow_id=main, 组=—, 块数=18)
+# main  (flow_id=main, 组=—, 块数=41)
 # 来源 studio-mcp flow.blocks.list(detail) · 编号=画布块序号+1
 # 指令名/参数名=影刀官方内置指令目录（见 tools/sb_blocks_zh.json）· 行尾[英文ID]=机器名，可 grep
 
@@ -20,3 +20,26 @@
 016  退出当前流程  [process.return]
 017  End IF  [workflow.endif]
 018  End IF  [workflow.endif]
+019  Try  [programing.try]
+020  调用模块  模块名称=collect_list  方法名称=main  方法参数列表=group_array=[]  返回值类型=dict  [process.invoke_module]
+021  保存自定义数据  读取Key=list_ok  数据内容=表达式=列表结果['ok']  [process.write_to_storage]
+022  保存自定义数据  读取Key=list_path  数据内容=表达式=列表结果['path']  [process.write_to_storage]
+023  打印日志  日志类型=info  日志内容=表达式='列表: ' + str(列表结果)  [programing.log]
+024  IF 条件  对象1=表达式=列表结果['ok']  关系=is true  操作符参数={}  [workflow.if]
+025  调用模块  模块名称=collect_detail  方法名称=main  方法参数列表=group_array=[args=expression={"list_jsonl": 列表结果['path']}]  返回值类型=dict  [process.invoke_module]
+026  保存自定义数据  读取Key=detail_ok  数据内容=表达式=详情结果['ok']  [process.write_to_storage]
+027  打印日志  日志类型=info  日志内容=表达式='详情: ' + str(详情结果)  [programing.log]
+028  End IF  [workflow.endif]
+029  调用模块  模块名称=run_clean  方法名称=main  方法参数列表=group_array=[]  返回值类型=dict  [process.invoke_module]
+030  保存自定义数据  读取Key=clean_dir  数据内容=表达式=清洗结果['out_dir']  [process.write_to_storage]
+031  打印日志  日志类型=info  日志内容=表达式='清洗: ' + str(清洗结果)  [programing.log]
+032  调用模块  模块名称=run_ingest  方法名称=main  方法参数列表=group_array=[]  返回值类型=dict  [process.invoke_module]
+033  保存自定义数据  读取Key=ingest_batch  数据内容=表达式=入库结果['batch_id']  [process.write_to_storage]
+034  打印日志  日志类型=info  日志内容=表达式='入库: ' + str(入库结果)  [programing.log]
+035  调用模块  模块名称=run_alert  方法名称=main  方法参数列表=group_array=[]  返回值类型=dict  [process.invoke_module]
+036  保存自定义数据  读取Key=alert_count  数据内容=表达式=告警结果['alerts']  [process.write_to_storage]
+037  打印日志  日志类型=info  日志内容=表达式='告警: ' + str(告警结果)  [programing.log]
+038  Catch  [programing.catch]
+039  打印日志  日志类型=error  日志内容=表达式='主流程异常：' + str(exception)  [programing.log]
+040  调用模块  模块名称=notify  方法名称=alert  方法参数列表=group_array=[text=expression='主流程异常：' + str(exception);title=竞品监控流程异常]  返回值类型=dict  [process.invoke_module]
+041  End Try  [programing.endtry]

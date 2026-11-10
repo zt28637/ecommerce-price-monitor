@@ -14,6 +14,22 @@ from risk_page import block_reason
 from scroll_to_bottom import _card_ids
 from filter_product import load_rules
 
+try:                       # 影刀 CodeFlow 内写运行日志；命令行退回 print
+    import xbot
+except ImportError:
+    xbot = None
+
+
+def log(msg):
+    if xbot is not None:
+        try:
+            xbot.app.logging.info(msg)
+            return
+        except Exception:
+            pass
+    print(msg, flush=True)
+
+
 PORT = 9223
 DEFAULT_ADDR = "127.0.0.1:%d" % PORT
 
@@ -175,9 +191,9 @@ def collect_list_ready(addr=DEFAULT_ADDR, port=PORT):
                 "价格区间筛选未完成（min=%s max=%s）：%s: %s"
                 % (lo, hi, type(e).__name__, e))
         changed = bool(after) and after != before
-        print("筛选%s：%d → %d 张" % ("生效" if changed else "未见变化", len(before), len(after)))
+        log("筛选%s：%d → %d 张" % ("生效" if changed else "未见变化", len(before), len(after)))
     else:
-        print("targets.json 未配置价格区间（min/max 均为 0），跳过价格筛选")
+        log("targets.json 未配置价格区间（min/max 均为 0），跳过价格筛选")
     # 筛选是最容易触发风控的动作；交付 page 前再确认一次没被拦
     _ensure_ok(page, "筛选后")
     return page

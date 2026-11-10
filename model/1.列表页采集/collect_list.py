@@ -13,6 +13,22 @@ from filter_product import filter, load_rules
 from storage import RunFile, save_run_log
 from next_page import turn_next_page
 
+try:                       # 影刀 CodeFlow 内写运行日志；命令行退回 print
+    import xbot
+except ImportError:
+    xbot = None
+
+
+def log(msg):
+    if xbot is not None:
+        try:
+            xbot.app.logging.info(msg)
+            return
+        except Exception:
+            pass
+    print(msg, flush=True)
+
+
 def main(args=None):
     # 列表页采集：准备 -> [滚动 -> 解析 -> 过滤 -> 落盘 -> 翻页] -> 台账
     if not isinstance(args, dict):
@@ -50,10 +66,10 @@ def main(args=None):
         try:
             meta["run_log"] = save_run_log(meta, ts=run_ts)
         except Exception as e:
-            print("台账写入失败（不影响采集结果）：%s" % e)
+            log("台账写入失败（不影响采集结果）：%s" % e)
         if meta["balance"] != "ok":
-            print("⚠ 台账不平：%s" % meta["balance"])
-        print("[列表] N=%d / M=%d（去重 %d）/ P=%d / K=%d · %s"
+            log("⚠ 台账不平：%s" % meta["balance"])
+        log("[列表] N=%d / M=%d（去重 %d）/ P=%d / K=%d · %s"
               % (meta["raw_n"], meta["filtered_m"], meta["dup_m"],
                  meta["passed_p"], meta["failed_k"], meta["balance"]))
         return meta
@@ -63,10 +79,10 @@ def main(args=None):
     try:
         page = collect_list_ready()
     except BrowserDown as e:
-        print("浏览器不可用：%s" % e)
+        log("浏览器不可用：%s" % e)
         return _result(reason="browser_down", detail=str(e), failed_k=1)
     except ReadyFailed as e:
-        print("搜索页不可用（%s）：%s" % (e.reason, e.detail))
+        log("搜索页不可用（%s）：%s" % (e.reason, e.detail))
         return _result(reason=e.reason, detail=e.detail, failed_k=1)
 
     all_passed, seen = [], set()
@@ -89,7 +105,7 @@ def main(args=None):
             if not reached:
                 # 没到底 = 可能少采，不是错采；仍解析当前页面，只留一笔记录
                 partial_pages.append(page_no)
-                print("第%d页未确认到底（可能少采），仍解析当前页面" % page_no)
+                log("第%d页未确认到底（可能少采），仍解析当前页面" % page_no)
 
             # 页面解析
             product_list = parse_list(page.html)
@@ -111,12 +127,12 @@ def main(args=None):
             # 先落盘再翻页：这一页的数已经安全了，再去谈下一页
             path = sink.append(new_rows)
 
-            print("第%d页 解析%d 通过%d 新增%d 累计%d" % (
+            log("第%d页 解析%d 通过%d 新增%d 累计%d" % (
                 page_no, len(product_list), len(passed_list), len(new_rows), len(all_passed)))
 
             # 达到目标数就停
             if target_n and len(all_passed) >= target_n:
-                print("达到目标数 %d，停止翻页" % target_n)
+                log("达到目标数 %d，停止翻页" % target_n)
                 break
 
             if page_no == max_pages:
@@ -125,7 +141,7 @@ def main(args=None):
             # 翻页：失败必须停，否则会在旧页上重复采集
             turn = turn_next_page(page)
             if not turn["ok"]:
-                print("翻页停止：%s" % turn["reason"])
+                log("翻页停止：%s" % turn["reason"])
                 break
             # 新页可能沿用上一页的底部位置；回到顶部，避免被误判到底
             page.run_js("window.scrollTo(0, 0)")
@@ -133,16 +149,16 @@ def main(args=None):
         # 采集中途炸了：不吞异常，但已落盘的前 N 页保留，如实标出来
         reason = "exception: %s" % e
         failed_k = 1
-        print("采集中断（%s）；已落盘 %d 条，文件 %s"
+        log("采集中断（%s）；已落盘 %d 条，文件 %s"
               % (e, sink.rows, path or "未创建"))
     finally:
         sink.close()
 
     # 落盘：runtime/list_raw/<关键词>/<时间戳>.jsonl（每页追加，断在中途也有前 N 页）
     if not path:
-        print("没有可落盘的数据；未到底页 %s" % (partial_pages or "无"))
+        log("没有可落盘的数据；未到底页 %s" % (partial_pages or "无"))
     else:
-        print("落盘 %s（%d 条；页数 %d；未到底页 %s）" % (
+        log("落盘 %s（%d 条；页数 %d；未到底页 %s）" % (
             path, sink.rows, pages_done, partial_pages or "无"))
 
     # 影刀「调用模块」拿这个返回值；本地直接跑也方便看统计
