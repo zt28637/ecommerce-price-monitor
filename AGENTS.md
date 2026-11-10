@@ -71,7 +71,7 @@ L3 本项目    AGENTS.md + model/
 ### 分层规则（硬性）
 
 - **质量分级在入库前完成** —— `run_clean` 出绿/黄/红与复核状态，`run_ingest` 只入 `auto_pass` / `approved`；`pending` / `rejected` 不入
-- **告警默认 dry-run** —— `run_alert` 默认 file 通道 / `--preview`；`--send` 必须人工确认后再跑
+- **告警：画布主流程自动发送** —— `main` 调 `run_alert` 传 `send=true`；CLI 默认仍 dry-run，补发用 `--send`；发送结果写 `push_log.jsonl`，同一条不会重复推
 - **运行时目录**：全部在 `runtime/`（`list_html/`、`list_raw/`、`detail_html/`、`detail_json/`、`detail_raw/`、`clean/`、`alerts/`、`run_log/`、`profile/`）
 - **浏览器 profile 与调试端口不进仓库**，固定 `runtime/profile` + 9223
 - **元素库归影刀应用内部**，不是仓库资源
