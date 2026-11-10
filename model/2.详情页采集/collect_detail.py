@@ -24,8 +24,16 @@ if _MODULE_DIR and _MODULE_DIR not in sys.path:
 _TOOL_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", "tool"))
 if os.path.isdir(_TOOL_DIR) and _TOOL_DIR not in sys.path:
     sys.path.insert(0, _TOOL_DIR)
+# 浏览器重启复用登录层的固定 profile 启动逻辑（CodeFlow 里 login_browser 是兄弟流程）
+_LOGIN_DIR = os.path.normpath(os.path.join(_MODULE_DIR, "..", "0.淘宝自动化登录"))
+if os.path.isdir(_LOGIN_DIR) and _LOGIN_DIR not in sys.path:
+    sys.path.insert(0, _LOGIN_DIR)
 
 import risk_page
+try:
+    import login_browser
+except Exception:
+    login_browser = None
 
 try:  # 允许脱离影刀离线运行
     import xbot
@@ -51,10 +59,13 @@ except ImportError:  # 直接 python collect_detail.py 时
 
 import json
 import random
+import subprocess
+import threading
 import time
 from urllib.parse import parse_qs, urlparse
 
-DEFAULT_ADDR = "127.0.0.1:9223"
+PORT = 9223
+DEFAULT_ADDR = "127.0.0.1:%d" % PORT
 DEFAULT_WAIT_TIMEOUT = 20
 DEFAULT_WAIT_POLL = 0.5
 DEFAULT_WAIT_JITTER_MIN = 1.0
@@ -73,6 +84,60 @@ def _log(msg):
         except Exception:
             pass
     print(msg, flush=True)
+
+
+def _js_alive(page, timeout=5):
+    """轻量健康检查：run_js 能在 timeout 内返回 1 才算浏览器可用。"""
+    box = {}
+
+    def _probe():
+        try:
+            box["v"] = page.run_js("return 1")
+        except Exception as e:
+            box["e"] = e
+
+    t = threading.Thread(target=_probe, daemon=True)
+    t.start()
+    t.join(timeout)
+    return (not t.is_alive()) and box.get("v") == 1
+
+
+def _kill_browser_on_port(port=PORT):
+    """按调试端口找到 Edge 进程并结束进程树；只影响 9223 上的调试浏览器。"""
+    try:
+        out = subprocess.check_output(["netstat", "-ano"], stderr=subprocess.DEVNULL)
+        text = out.decode("mbcs", errors="ignore")
+        for line in text.splitlines():
+            if ":%d" % port in line and "LISTEN" in line.upper():
+                pid = line.split()[-1]
+                subprocess.run(["taskkill", "/PID", pid, "/T", "/F"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return pid
+    except Exception:
+        pass
+    return ""
+
+
+def _restart_browser(page, addr):
+    """浏览器无响应时重启：退出旧实例 → 按端口杀进程 → 用固定 profile 拉起。"""
+    def _quit():
+        try:
+            page.quit()
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_quit, daemon=True)
+    t.start()
+    t.join(5)
+    _kill_browser_on_port(PORT)
+    time.sleep(2)
+    try:
+        if login_browser is not None:
+            login_browser.ensure()
+    except Exception as e:
+        _log("[详情] 重启浏览器失败：%s" % e)
+    from DrissionPage import ChromiumPage   # 仅运行期需要
+    return ChromiumPage(addr)
 
 
 def _as_list(v):
@@ -568,7 +633,7 @@ def collect_one(page, url, product_id=None, wait_timeout=DEFAULT_WAIT_TIMEOUT,
     先打开再判登录；然后等 sku2info 出现（最多 wait_timeout 秒），
     再随机停留 jitter 秒；不再固定 sleep 8 秒。
     """
-    page.get(url)
+    page.get(url, timeout=30, retry=0)
     try:
         page.wait.doc_loaded(timeout=20)
     except Exception:
@@ -696,14 +761,19 @@ def main(args=None):
         return {"ok": False, "reason": "page_risk_cooldown",
                 "page_risk_until": page_risk_until}
 
-    page = ChromiumPage(cfg.get("addr", DEFAULT_ADDR))
+    addr = cfg.get("addr", DEFAULT_ADDR)
+    page = ChromiumPage(addr)
     run = detail_storage.new_run(root=cfg.get("root"))
     crawl_date = time.strftime("%Y-%m-%d")
     done = failed = partial = rows_total = 0
+    page_fail_streak = 0
     errors = []
     reason = "ok"
 
     for i, url in enumerate(urls, 1):
+        if not _js_alive(page):
+            _log("[详情] 浏览器无响应，重启后继续（%d/%d）" % (i, len(urls)))
+            page = _restart_browser(page, addr)
         _log("[详情] (%d/%d) %s" % (i, len(urls), url))
         page_retries = 0
         while True:
@@ -723,6 +793,8 @@ def main(args=None):
                  % (page_retries, retry_times, url, result.get("reason")))
             time.sleep(random.uniform(3, 6))
         result["retry_count"] = page_retries
+        if result.get("ok"):
+            page_fail_streak = 0
 
         if result.get("risk"):
             reason = "risk"
@@ -747,6 +819,11 @@ def main(args=None):
                 errors.append({"url": url, "reason": result.get("reason") or "open_error",
                                "retry": page_retries})
                 _log("[详情] 打开失败：%s（重试 %d 次）" % (result.get("reason"), page_retries))
+                page_fail_streak += 1
+                if page_fail_streak >= 2:
+                    _log("[详情] 连续打开失败 %d 次，重启浏览器" % page_fail_streak)
+                    page = _restart_browser(page, addr)
+                    page_fail_streak = 0
                 continue
             path, _ = detail_storage.save_html_gz(result.get("product_id") or "unknown", html or "", run)
             errors.append({"url": url, "reason": result.get("reason") or "parse_failed",
