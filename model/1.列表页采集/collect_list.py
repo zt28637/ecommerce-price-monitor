@@ -29,6 +29,18 @@ def log(msg):
     print(msg, flush=True)
 
 
+def _cap_rows(rows, already, target_n):
+    """按目标数截断本页新增；返回 (保留行, 截断数)。target_n=0 不截断。"""
+    if not target_n:
+        return rows, 0
+    room = target_n - already
+    if room <= 0:
+        return [], len(rows)
+    if len(rows) > room:
+        return rows[:room], len(rows) - room
+    return rows, 0
+
+
 def main(args=None):
     # 列表页采集：准备 -> [滚动 -> 解析 -> 过滤 -> 落盘 -> 翻页] -> 台账
     if not isinstance(args, dict):
@@ -55,7 +67,7 @@ def main(args=None):
             "ts": run_ts, "keyword": rules["keyword"],
             "max_pages": max_pages, "target_n": target_n,
             "pages": 0, "raw_n": 0, "filtered_m": 0, "passed_p": 0,
-            "dup_m": 0, "failed_k": 0, "partial_pages": [],
+            "dup_m": 0, "truncated_n": 0, "failed_k": 0, "partial_pages": [],
             "path": "", "run_log": "",
         }
         meta.update(kw)
@@ -69,8 +81,8 @@ def main(args=None):
             log("台账写入失败（不影响采集结果）：%s" % e)
         if meta["balance"] != "ok":
             log("⚠ 台账不平：%s" % meta["balance"])
-        log("[列表] N=%d / M=%d（去重 %d）/ P=%d / K=%d · %s"
-              % (meta["raw_n"], meta["filtered_m"], meta["dup_m"],
+        log("[列表] N=%d / M=%d（去重 %d / 截断 %d）/ P=%d / K=%d · %s"
+              % (meta["raw_n"], meta["filtered_m"], meta["dup_m"], meta["truncated_n"],
                  meta["passed_p"], meta["failed_k"], meta["balance"]))
         return meta
 
@@ -91,6 +103,7 @@ def main(args=None):
     raw_n = 0
     filtered_m = 0
     dup_m = 0
+    truncated_n = 0
     pages_done = 0
     failed_k = 0
     reason = ""
@@ -120,15 +133,21 @@ def main(args=None):
                 seen.add(r["product_id"])
                 new_rows.append(r)
 
+            dup_m += len(passed_list) - len(new_rows)
+
+            # 达到目标数时在过滤结果内提前截断，避免整页超采
+            new_rows, truncated = _cap_rows(new_rows, len(all_passed), target_n)
+
             raw_n += len(product_list)
             filtered_m += len(product_list) - len(new_rows)
-            dup_m += len(passed_list) - len(new_rows)
+            truncated_n += truncated
             all_passed += new_rows
             # 先落盘再翻页：这一页的数已经安全了，再去谈下一页
             path = sink.append(new_rows)
 
-            log("第%d页 解析%d 通过%d 新增%d 累计%d" % (
-                page_no, len(product_list), len(passed_list), len(new_rows), len(all_passed)))
+            log("第%d页 解析%d 通过%d 新增%d 截断%d 累计%d" % (
+                page_no, len(product_list), len(passed_list), len(new_rows),
+                truncated, len(all_passed)))
 
             # 达到目标数就停
             if target_n and len(all_passed) >= target_n:
@@ -169,6 +188,7 @@ def main(args=None):
         raw_n=raw_n,
         filtered_m=filtered_m,
         dup_m=dup_m,
+        truncated_n=truncated_n,
         passed_p=len(all_passed),
         failed_k=failed_k,
         partial_pages=partial_pages,
