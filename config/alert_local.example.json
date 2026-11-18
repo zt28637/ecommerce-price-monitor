@@ -1,0 +1,8 @@
+{
+  "channels": {
+    "feishu": {
+      "url": "<飞书自定义机器人 webhook>",
+      "secret": "<飞书加签密钥，无加签留空>"
+    }
+  }
+}

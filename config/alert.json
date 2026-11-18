@@ -1,0 +1,28 @@
+{
+  "thresholds": {
+    "drop_pct_daily": 5.0,
+    "drop_pct_instant": 10.0,
+    "rise_pct_daily": 5.0,
+    "rise_pct_instant": 10.0,
+    "drop_abs_daily": 5.0,
+    "drop_abs_instant": 20.0,
+    "rise_abs_daily": 5.0,
+    "rise_abs_instant": 20.0,
+    "new_low_instant": true
+  },
+  "dedup": {
+    "cooldown_hours": 24,
+    "re_alert_pct": 3.0
+  },
+  "new_product": {
+    "enabled": true,
+    "top_n": 10,
+    "days": 7,
+    "min_history_days": 3
+  },
+  "channels": {
+    "default": "feishu"
+  },
+  "send_instant": true,
+  "send_daily": true
+}
